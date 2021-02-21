@@ -5,16 +5,13 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.lwjgl.system.CallbackI.P;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.lib.gson.JsonReader;
+import net.fabricmc.wasmruntime.Errors.WasmParseError;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.WorldSavePath;
 
@@ -51,10 +48,12 @@ public class WasmRuntime implements ModInitializer {
 
 					for (String modulePath : modulesPaths) {
 						try {
-							Modules.LoadModule(new File(configFolder, modulePath));
+							File module = new File(configFolder, modulePath);
+							Modules.LoadModule(module, module.getName());
 						} catch (IOException e) {
-							System.out.printf("Error reading file %s", modulePath);
-							System.out.println(e);
+							System.out.printf("Error reading file %s\n", modulePath);
+						} catch (WasmParseError e) {
+							System.out.printf("Error parsing file %s: %s\n", modulePath, e.toString());
 						}
 					}
 
