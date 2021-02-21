@@ -3,28 +3,25 @@
   "id": "modid",
   "version": "${version}",
 
-  "name": "Example Mod",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "name": "Fabric wasm runtime",
+  "description": "Make custom plugins for minecraft using any language that can compile to wasm",
   "authors": [
-    "Me!"
+    "Xendergo"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "homepage": "https://github.com/Xendergo/Minecraft-wasm-runtime",
+    "sources": "https://github.com/Xendergo/Minecraft-wasm-runtime"
   },
 
   "license": "CC0-1.0",
-  "icon": "assets/modid/icon.png",
+  "icon": "assets/wasm_runtime/icon.png",
 
   "environment": "*",
   "entrypoints": {
     "main": [
-      "net.fabricmc.example.ExampleMod"
+      "net.fabricmc.wasmruntime.WasmRuntime"
     ]
   },
-  "mixins": [
-    "modid.mixins.json"
-  ],
 
   "depends": {
     "fabricloader": ">=0.7.4",
