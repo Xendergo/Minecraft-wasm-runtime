@@ -1,7 +1,9 @@
 package net.fabricmc.wasmruntime.ModuleParsing;
 
 import net.fabricmc.wasmruntime.ModuleData.FunctionType;
+import net.fabricmc.wasmruntime.ModuleData.ImportedFunction;
 import net.fabricmc.wasmruntime.ModuleData.Module;
+import net.fabricmc.wasmruntime.ModuleData.WasmFunction;
 import net.fabricmc.wasmruntime.ModuleData.WasmType;
 
 import java.nio.charset.Charset;
@@ -27,11 +29,11 @@ public class Parser {
       index += offset;
       int end = index + length;
       switch (section) {
-        case 0:
+        case 0: // Custom section: https://webassembly.github.io/spec/core/binary/modules.html#custom-section
         module.CustomSection.put(readName(bytes, index), Arrays.copyOfRange(bytes, index + offset, end));
         break;
         
-        case 1:
+        case 1: // Type section: https://webassembly.github.io/spec/core/binary/modules.html#type-section
         int typeAmt = readInt(bytes, index);
         index += offset;
         for (int i = 0; i < typeAmt; i++) {
@@ -62,8 +64,37 @@ public class Parser {
             throw new WasmParseError("The type section is messed up");
           }
         }
+        break;
 
-        System.out.println(module.TypeSection);
+        case 2: // Import section: https://webassembly.github.io/spec/core/binary/modules.html#import-section
+        int importAmt = readInt(bytes, index);
+        index += offset;
+
+        for (int i = 0; i < importAmt; i++) {
+          String moduleName = readName(bytes, index);
+          index += offset;
+
+          String importName = readName(bytes, index);
+          index += offset;
+
+          switch (bytes[index]) {
+            case 0x00:
+            module.Functions.add(new ImportedFunction(moduleName, importName, bytes[index + 1]));
+            break;
+          }
+        }
+        break;
+
+        case 3:
+        int functionAmt = readInt(bytes, index);
+        index += offset;
+
+        for (int i = 0; i < functionAmt; i++) {
+          module.Functions.add(new WasmFunction(readInt(bytes, index)));
+          index += offset;
+        }
+
+        System.out.println(module.Functions);
         break;
 
         default:
