@@ -2,9 +2,13 @@ package net.fabricmc.wasmruntime.ModuleParsing;
 
 import net.fabricmc.wasmruntime.ModuleData.FunctionType;
 import net.fabricmc.wasmruntime.ModuleData.ImportedFunction;
+import net.fabricmc.wasmruntime.ModuleData.Limit;
+import net.fabricmc.wasmruntime.ModuleData.Memory;
 import net.fabricmc.wasmruntime.ModuleData.Module;
 import net.fabricmc.wasmruntime.ModuleData.WasmFunction;
-import net.fabricmc.wasmruntime.ModuleData.WasmType;
+import net.fabricmc.wasmruntime.ModuleData.WasmTable;
+import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.ElementType;
+import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -81,11 +85,20 @@ public class Parser {
             case 0x00:
             module.Functions.add(new ImportedFunction(moduleName, importName, bytes[index + 1]));
             break;
+
+            case 0x01:
+            throw new WasmParseError("Importing tables is unsupported");
+
+            case 0x02:
+            throw new WasmParseError("Importing memory is unsupported");
+
+            default:
+            throw new WasmParseError("Unknown import descriptor "+bytes[index]);
           }
         }
         break;
 
-        case 3:
+        case 3: // Function section https://webassembly.github.io/spec/core/binary/modules.html#function-section
         int functionAmt = readInt(bytes, index);
         index += offset;
 
@@ -93,8 +106,27 @@ public class Parser {
           module.Functions.add(new WasmFunction(readInt(bytes, index)));
           index += offset;
         }
+        break;
 
-        System.out.println(module.Functions);
+        case 4: // Table section https://webassembly.github.io/spec/core/binary/modules.html#table-section
+        int tableAmt = readInt(bytes, index);
+        index += offset;
+
+        for (int i = 0; i < tableAmt; i++) {
+          ElementType type = ElementType.elementTypeMap.get(bytes[index]);
+          index++;
+          Limit limit = readLimit(bytes, index);
+          module.Tables.add(new WasmTable(limit, type));
+        }
+        break;
+
+        case 5: // Memory section https://webassembly.github.io/spec/core/binary/modules.html#memory-section
+        int memoryAmt = readInt(bytes, index);
+        index += offset;
+
+        for (int i = 0; i < memoryAmt; i++) {
+          module.Memories.add(new Memory(readLimit(bytes, index)));
+        }
         break;
 
         default:
@@ -137,5 +169,19 @@ public class Parser {
     start += offset;
     offset += length;
     return new String(Arrays.copyOfRange(bytes, start, start + length), Charset.forName("UTF8"));
+  }
+
+  public static Limit readLimit(byte[] bytes, int start) {
+    int originalStart = start;
+
+    boolean maxPresent = bytes[start] == 1;
+    start++;
+
+    int min = readInt(bytes, start);
+    start += offset;
+    int max = maxPresent ? readInt(bytes, start) : -1;
+    offset = start - originalStart + offset;
+
+    return new Limit(min, max);
   }
 }

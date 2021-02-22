@@ -1,4 +1,4 @@
-package net.fabricmc.wasmruntime.ModuleData;
+package net.fabricmc.wasmruntime.ModuleData.HelpfulEnums;
 
 import java.util.HashMap;
 

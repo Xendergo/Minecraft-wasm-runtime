@@ -2,6 +2,7 @@ package net.fabricmc.wasmruntime.ModuleData;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
 
 public class FunctionType {
   public List<WasmType> inputs;

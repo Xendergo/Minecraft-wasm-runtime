@@ -10,4 +10,6 @@ public class Module {
   public HashMap<String, byte[]> CustomSection = new HashMap<String, byte[]>();
   public List<FunctionType> TypeSection = new ArrayList<FunctionType>();
   public List<WasmFunction> Functions = new ArrayList<WasmFunction>();
+  public List<WasmTable> Tables = new ArrayList<WasmTable>();
+  public List<Memory> Memories = new ArrayList<Memory>();
 }
