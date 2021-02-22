@@ -1,5 +1,6 @@
 package net.fabricmc.wasmruntime.ModuleParsing;
 
+import net.fabricmc.wasmruntime.ModuleData.ExportedFunction;
 import net.fabricmc.wasmruntime.ModuleData.FunctionType;
 import net.fabricmc.wasmruntime.ModuleData.ImportedFunction;
 import net.fabricmc.wasmruntime.ModuleData.Limit;
@@ -129,6 +130,37 @@ public class Parser {
         }
         break;
 
+        case 7:
+        int exportAmt = readInt(bytes, index);
+        index += offset;
+
+        for (int i = 0; i < exportAmt; i++) {
+          String name = readName(bytes, index);
+          index += offset;
+
+          switch (bytes[index]) {
+            case 0x00:
+            index++;
+            module.exportedFunctions.add(new ExportedFunction(name, readInt(bytes, index)));
+            break;
+
+            case 0x01:
+            printWarning("Exporting tables is unneccesary");
+            break;
+
+            case 0x02:
+            if (module.ExportedMemory != -1) {
+              throw new WasmParseError("Can't export more than one memory");
+            }
+            index++;
+            module.ExportedMemory = readInt(bytes, index);
+            break;
+          }
+
+          index++;
+        }
+        break;
+
         default:
         throw new WasmParseError("Unknown section id " + section);
       }
@@ -183,5 +215,9 @@ public class Parser {
     offset = start - originalStart + offset;
 
     return new Limit(min, max);
+  }
+
+  public static void printWarning(String str) {
+    System.out.println(str);
   }
 }
