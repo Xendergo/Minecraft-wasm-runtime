@@ -246,6 +246,11 @@ public class Parser {
         }
         break;
 
+        case 8:
+        module.startFunction = readInt(bytes, index);
+        index += offset;
+        break;
+
         default:
         throw new WasmParseError("Unknown section id " + section);
       }

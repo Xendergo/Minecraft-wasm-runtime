@@ -18,4 +18,5 @@ public class Module {
   public HashMap<String, Export> exportedGlobals = new HashMap<String, Export>();
   public Export exportedMemory;
 
+  public int startFunction;
 }
