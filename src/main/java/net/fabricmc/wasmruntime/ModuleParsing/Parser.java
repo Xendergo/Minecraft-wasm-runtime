@@ -1,7 +1,10 @@
 package net.fabricmc.wasmruntime.ModuleParsing;
 
+import net.fabricmc.wasmruntime.ModuleData.ConstantExpression;
 import net.fabricmc.wasmruntime.ModuleData.ExportedFunction;
+import net.fabricmc.wasmruntime.ModuleData.Expression;
 import net.fabricmc.wasmruntime.ModuleData.FunctionType;
+import net.fabricmc.wasmruntime.ModuleData.Global;
 import net.fabricmc.wasmruntime.ModuleData.ImportedFunction;
 import net.fabricmc.wasmruntime.ModuleData.Limit;
 import net.fabricmc.wasmruntime.ModuleData.Memory;
@@ -10,6 +13,12 @@ import net.fabricmc.wasmruntime.ModuleData.WasmFunction;
 import net.fabricmc.wasmruntime.ModuleData.WasmTable;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.ElementType;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
+import net.fabricmc.wasmruntime.ModuleExecutor.ExecExpression;
+import net.fabricmc.wasmruntime.ModuleExecutor.Value;
+import net.fabricmc.wasmruntime.ModuleExecutor.ValueF32;
+import net.fabricmc.wasmruntime.ModuleExecutor.ValueF64;
+import net.fabricmc.wasmruntime.ModuleExecutor.ValueI32;
+import net.fabricmc.wasmruntime.ModuleExecutor.ValueI64;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -130,7 +139,45 @@ public class Parser {
         }
         break;
 
-        case 7:
+        case 6: // Global section https://webassembly.github.io/spec/core/binary/modules.html#global-section
+        int globalAmt = readInt(bytes, index);
+        index += offset;
+
+        for (int i = 0; i < globalAmt; i++) {
+          index += 2;
+          WasmType type = WasmType.typeMap.get(bytes[index-2]);
+          boolean mutable = bytes[index-1] == 0;
+          ConstantExpression expr = new ConstantExpression(readExpr(bytes, index), type);
+          index += offset;
+
+          if (!expr.IsValid()) {
+            throw new WasmParseError("Invalid global initializer with global index " + i);
+          }
+          Value ret = ExecExpression.Exec(expr).stack[0];
+
+          switch (type) {
+            case i32:
+            module.Globals.add(new Global<ValueI32>((ValueI32)ret, mutable));
+            break;
+
+            case i64:
+            module.Globals.add(new Global<ValueI64>((ValueI64)ret, mutable));
+            break;
+
+            case f32:
+            module.Globals.add(new Global<ValueF32>((ValueF32)ret, mutable));
+            break;
+
+            case f64:
+            module.Globals.add(new Global<ValueF64>((ValueF64)ret, mutable));
+            break;
+          }
+        }
+
+        System.out.println(module.Globals);
+        break;
+
+        case 7: // Export section https://webassembly.github.io/spec/core/binary/modules.html#export-section
         int exportAmt = readInt(bytes, index);
         index += offset;
 
@@ -219,5 +266,27 @@ public class Parser {
 
   public static void printWarning(String str) {
     System.out.println(str);
+  }
+
+  public static byte[] readExpr(byte[] bytes, int start) {
+    int blockDepth = 0;
+
+    int originalStart = start;
+
+    while (blockDepth != 0 || bytes[start] != 0x0B) {
+      if (bytes[start] == 0x0B) {
+        blockDepth--;
+      }
+
+      if (bytes[start] > 0x01 && bytes[start] < 0x05) {
+        blockDepth++;
+      }
+
+      start++;
+    }
+
+    offset = start - originalStart + 1;
+
+    return Arrays.copyOfRange(bytes, originalStart, start);
   }
 }

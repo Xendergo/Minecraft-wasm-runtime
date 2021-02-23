@@ -13,6 +13,12 @@ public class FunctionType {
     outputs = out;
   }
 
+  public FunctionType(WasmType out) {
+    inputs = new ArrayList<WasmType>();
+    outputs = new ArrayList<WasmType>();
+    outputs.add(out);
+  }
+
   public FunctionType() {
     inputs = new ArrayList<WasmType>();
     outputs = new ArrayList<WasmType>();

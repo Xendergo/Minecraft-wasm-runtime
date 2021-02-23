@@ -12,6 +12,7 @@ public class Module {
   public List<WasmFunction> Functions = new ArrayList<WasmFunction>();
   public List<WasmTable> Tables = new ArrayList<WasmTable>();
   public List<Memory> Memories = new ArrayList<Memory>();
+  public List<Global<?>> Globals = new ArrayList<Global<?>>();
 
   public List<ExportedFunction> exportedFunctions = new ArrayList<ExportedFunction>();
 
