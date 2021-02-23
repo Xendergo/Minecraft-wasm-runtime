@@ -1,17 +1,18 @@
 package net.fabricmc.wasmruntime.ModuleParsing;
 
 import net.fabricmc.wasmruntime.ModuleData.ConstantExpression;
-import net.fabricmc.wasmruntime.ModuleData.ExportedFunction;
-import net.fabricmc.wasmruntime.ModuleData.Expression;
+import net.fabricmc.wasmruntime.ModuleData.Export;
 import net.fabricmc.wasmruntime.ModuleData.FunctionType;
 import net.fabricmc.wasmruntime.ModuleData.Global;
 import net.fabricmc.wasmruntime.ModuleData.ImportedFunction;
+import net.fabricmc.wasmruntime.ModuleData.ImportedGlobal;
 import net.fabricmc.wasmruntime.ModuleData.Limit;
 import net.fabricmc.wasmruntime.ModuleData.Memory;
 import net.fabricmc.wasmruntime.ModuleData.Module;
 import net.fabricmc.wasmruntime.ModuleData.WasmFunction;
 import net.fabricmc.wasmruntime.ModuleData.WasmTable;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.ElementType;
+import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.ExportTypes;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
 import net.fabricmc.wasmruntime.ModuleExecutor.ExecExpression;
 import net.fabricmc.wasmruntime.ModuleExecutor.Value;
@@ -93,7 +94,9 @@ public class Parser {
 
           switch (bytes[index]) {
             case 0x00:
-            module.Functions.add(new ImportedFunction(moduleName, importName, bytes[index + 1]));
+            index++;
+            module.Functions.add(new ImportedFunction(moduleName, importName, bytes[index]));
+            index++;
             break;
 
             case 0x01:
@@ -102,10 +105,35 @@ public class Parser {
             case 0x02:
             throw new WasmParseError("Importing memory is unsupported");
 
+            case 0x03:
+            index += 2;
+            WasmType type = WasmType.typeMap.get(bytes[index-1]);
+            boolean mutable = bytes[index] == 0;
+
+            switch (type) {
+              case i32:
+              module.Globals.add(new ImportedGlobal<ValueI32>(moduleName, importName, mutable));
+              break;
+
+              case i64:
+              module.Globals.add(new ImportedGlobal<ValueI64>(moduleName, importName, mutable));
+              break;
+
+              case f32:
+              module.Globals.add(new ImportedGlobal<ValueF32>(moduleName, importName, mutable));
+              break;
+
+              case f64:
+              module.Globals.add(new ImportedGlobal<ValueF64>(moduleName, importName, mutable));
+              break;
+            }
+            break;
+
             default:
             throw new WasmParseError("Unknown import descriptor "+bytes[index]);
           }
         }
+        System.out.println(module.Globals);
         break;
 
         case 3: // Function section https://webassembly.github.io/spec/core/binary/modules.html#function-section
@@ -173,8 +201,6 @@ public class Parser {
             break;
           }
         }
-
-        System.out.println(module.Globals);
         break;
 
         case 7: // Export section https://webassembly.github.io/spec/core/binary/modules.html#export-section
@@ -188,23 +214,35 @@ public class Parser {
           switch (bytes[index]) {
             case 0x00:
             index++;
-            module.exportedFunctions.add(new ExportedFunction(name, readInt(bytes, index)));
+            module.exportedFunctions.put(name, new Export(ExportTypes.Func, readInt(bytes, index)));
+            index += offset;
             break;
 
             case 0x01:
+            index++;
             printWarning("Exporting tables is unneccesary");
+            readInt(bytes, index);
+            index += offset;
             break;
 
             case 0x02:
-            if (module.ExportedMemory != -1) {
+            if (module.exportedMemory != null) {
               throw new WasmParseError("Can't export more than one memory");
             }
             index++;
-            module.ExportedMemory = readInt(bytes, index);
+            module.exportedMemory = new Export(ExportTypes.Memory, readInt(bytes, index));
+            index += offset;
             break;
-          }
 
-          index++;
+            case 0x03:
+            index++;
+            module.exportedGlobals.put(name, new Export(ExportTypes.Global, readInt(bytes, index)));
+            index += offset;
+            break;
+
+            default:
+            throw new WasmParseError("Unknown export descriptor " + bytes[index]);
+          }
         }
         break;
 

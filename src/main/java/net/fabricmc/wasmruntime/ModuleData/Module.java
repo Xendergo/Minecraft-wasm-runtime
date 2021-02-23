@@ -14,7 +14,8 @@ public class Module {
   public List<Memory> Memories = new ArrayList<Memory>();
   public List<Global<?>> Globals = new ArrayList<Global<?>>();
 
-  public List<ExportedFunction> exportedFunctions = new ArrayList<ExportedFunction>();
+  public HashMap<String, Export> exportedFunctions = new HashMap<String, Export>();
+  public HashMap<String, Export> exportedGlobals = new HashMap<String, Export>();
+  public Export exportedMemory;
 
-  public int ExportedMemory = -1;
 }
