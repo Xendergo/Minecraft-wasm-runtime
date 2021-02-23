@@ -10,7 +10,7 @@ import net.fabricmc.wasmruntime.ModuleData.Limit;
 import net.fabricmc.wasmruntime.ModuleData.Memory;
 import net.fabricmc.wasmruntime.ModuleData.Module;
 import net.fabricmc.wasmruntime.ModuleData.WasmFunction;
-import net.fabricmc.wasmruntime.ModuleData.WasmTable;
+import net.fabricmc.wasmruntime.ModuleData.Table;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.ElementType;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.ExportTypes;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
@@ -21,6 +21,7 @@ import net.fabricmc.wasmruntime.ModuleExecutor.ValueF64;
 import net.fabricmc.wasmruntime.ModuleExecutor.ValueI32;
 import net.fabricmc.wasmruntime.ModuleExecutor.ValueI64;
 
+import java.beans.Expression;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -133,7 +134,6 @@ public class Parser {
             throw new WasmParseError("Unknown import descriptor "+bytes[index]);
           }
         }
-        System.out.println(module.Globals);
         break;
 
         case 3: // Function section https://webassembly.github.io/spec/core/binary/modules.html#function-section
@@ -154,7 +154,7 @@ public class Parser {
           ElementType type = ElementType.elementTypeMap.get(bytes[index]);
           index++;
           Limit limit = readLimit(bytes, index);
-          module.Tables.add(new WasmTable(limit, type));
+          module.Tables.add(new Table(limit, type));
         }
         break;
 
@@ -249,6 +249,35 @@ public class Parser {
         case 8:
         module.startFunction = readInt(bytes, index);
         index += offset;
+        break;
+
+        case 9:
+        int elementAmt = readInt(bytes, index);
+        index += offset;
+
+        for (int i = 0; i < elementAmt; i++) {
+          int tableIndex = readInt(bytes, index);
+          index += offset;
+
+          ConstantExpression expr = new ConstantExpression(readExpr(bytes, index), WasmType.i32);
+          index += offset;
+
+          if (!expr.IsValid()) {
+            throw new WasmParseError("Constant expression for offset of values in table "+tableIndex+" is invalid");
+          }
+
+          int tableOffset = ((ValueI32)ExecExpression.Exec(expr).stack[0]).value;
+
+          int vecAmt = readInt(bytes, index);
+          index += offset;
+
+          for (int j = 0; j < vecAmt; j++) {
+            module.Tables.get(tableIndex).values.put(tableOffset+j, readInt(bytes, index));
+            index += offset;
+          }
+        }
+
+        System.out.println(module.Tables);
         break;
 
         default:
