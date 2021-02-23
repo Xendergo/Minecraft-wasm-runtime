@@ -13,6 +13,7 @@ public class Module {
   public List<Table> Tables = new ArrayList<Table>();
   public List<Memory> Memories = new ArrayList<Memory>();
   public List<Global<?>> Globals = new ArrayList<Global<?>>();
+  public List<Code> Codes = new ArrayList<Code>();
 
   public HashMap<String, Export> exportedFunctions = new HashMap<String, Export>();
   public HashMap<String, Export> exportedGlobals = new HashMap<String, Export>();

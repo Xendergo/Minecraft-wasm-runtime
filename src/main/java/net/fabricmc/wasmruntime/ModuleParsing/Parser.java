@@ -1,7 +1,9 @@
 package net.fabricmc.wasmruntime.ModuleParsing;
 
+import net.fabricmc.wasmruntime.ModuleData.Code;
 import net.fabricmc.wasmruntime.ModuleData.ConstantExpression;
 import net.fabricmc.wasmruntime.ModuleData.Export;
+import net.fabricmc.wasmruntime.ModuleData.Expression;
 import net.fabricmc.wasmruntime.ModuleData.FunctionType;
 import net.fabricmc.wasmruntime.ModuleData.Global;
 import net.fabricmc.wasmruntime.ModuleData.ImportedFunction;
@@ -21,10 +23,10 @@ import net.fabricmc.wasmruntime.ModuleExecutor.ValueF64;
 import net.fabricmc.wasmruntime.ModuleExecutor.ValueI32;
 import net.fabricmc.wasmruntime.ModuleExecutor.ValueI64;
 
-import java.beans.Expression;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import net.fabricmc.wasmruntime.Errors.WasmParseError;
 
@@ -276,8 +278,40 @@ public class Parser {
             index += offset;
           }
         }
+        break;
 
-        System.out.println(module.Tables);
+        case 10:
+        int codeAmt = readInt(bytes, index);
+        index += offset;
+
+        for (int i = 0; i < codeAmt; i++) {
+          readInt(bytes, index);
+          index += offset;
+
+          int localsAmt = readInt(bytes, index);
+          index += offset;
+
+          List<WasmType> locals = new ArrayList<WasmType>();
+          for (int j = 0; j < localsAmt; j++) {
+            int amt = readInt(bytes, index);
+            index+=offset;
+
+            WasmType type = WasmType.typeMap.get(bytes[index]);
+
+            index++;
+
+            for (int k = 0; k < amt; k++) {
+              locals.add(type);
+            }
+          }
+
+          Expression expr = new Expression(readExpr(bytes, index));
+          index += offset;
+
+          module.Codes.add(new Code(locals, expr));
+        }
+
+        System.out.println(module.Codes);
         break;
 
         default:
@@ -340,6 +374,9 @@ public class Parser {
     System.out.println(str);
   }
 
+  /*
+  TODO: Make this skip immediate values
+  */
   public static byte[] readExpr(byte[] bytes, int start) {
     int blockDepth = 0;
 

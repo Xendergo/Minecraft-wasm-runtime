@@ -10,14 +10,17 @@ public class Expression {
 
   public List<Expression> Blocks = new ArrayList<Expression>();
 
-  public Expression(byte[] bytecodeOof, FunctionType typeOof) {
+  public Expression(byte[] bytecodeOof) {
     bytecode = bytecodeOof;
-    type = typeOof;
   }
 
   // Will do this later
   public boolean IsValid() {
     stackSize = 1;
     return true;
+  }
+
+  public String toString() {
+    return "Expression {type: " + type + ", stackSize: " + stackSize + ", bytecode size: " + bytecode.length + "}";
   }
 }
