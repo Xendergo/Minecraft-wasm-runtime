@@ -112,6 +112,7 @@ public class Parser {
             index += 2;
             WasmType type = WasmType.typeMap.get(bytes[index-1]);
             boolean mutable = bytes[index] == 0;
+            index++;
 
             switch (type) {
               case i32:
@@ -248,12 +249,12 @@ public class Parser {
         }
         break;
 
-        case 8:
+        case 8: // Start section https://webassembly.github.io/spec/core/binary/modules.html#start-section
         module.startFunction = readInt(bytes, index);
         index += offset;
         break;
 
-        case 9:
+        case 9: // Element section https://webassembly.github.io/spec/core/binary/modules.html#element-section
         int elementAmt = readInt(bytes, index);
         index += offset;
 
@@ -280,7 +281,7 @@ public class Parser {
         }
         break;
 
-        case 10:
+        case 10: // Code section https://webassembly.github.io/spec/core/binary/modules.html#code-section
         int codeAmt = readInt(bytes, index);
         index += offset;
 
@@ -310,8 +311,39 @@ public class Parser {
 
           module.Codes.add(new Code(locals, expr));
         }
+        break;
 
-        System.out.println(module.Codes);
+        case 11: // Data section https://webassembly.github.io/spec/core/binary/modules.html#data-section
+        int dataAmt = readInt(bytes, index);
+        index += offset;
+
+        for (int i = 0; i < dataAmt; i++) {
+          int memoryIndex = readInt(bytes, index);
+          index += offset;
+
+          ConstantExpression expr = new ConstantExpression(readExpr(bytes, index), WasmType.i32);
+          index += offset;
+
+          if (!expr.IsValid()) {
+            throw new WasmParseError("Constant expression for offset of data index " + i + "is invalid");
+          }
+
+          int memoryOffset = ((ValueI32)ExecExpression.Exec(expr).stack[0]).value;
+
+          int byteAmt = readInt(bytes, index);
+          index += offset;
+
+          byte[] memory = module.Memories.get(memoryIndex).data;
+          byte[] data = Arrays.copyOfRange(bytes, index, index + byteAmt);
+
+          try {
+            for (int j = 0; j < byteAmt; j++) {
+              memory[j + memoryOffset] = data[j];
+            }
+          } catch (ArrayIndexOutOfBoundsException e) {
+            throw new WasmParseError("Not enough memory to be able to store the data at index "+index);
+          }
+        }
         break;
 
         default:
