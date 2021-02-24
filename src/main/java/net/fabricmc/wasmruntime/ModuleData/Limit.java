@@ -9,6 +9,16 @@ public class Limit {
     max = maxOof;
   }
 
+  public boolean IsValid(int range) {
+    if (max > range) return false;
+
+    if (max != -1) {
+      return min <= max;
+    }
+
+    return min <= range;
+  }
+
   public String toString() {
     return min+" - "+max;
   }

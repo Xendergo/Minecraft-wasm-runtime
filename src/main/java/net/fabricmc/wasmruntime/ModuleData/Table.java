@@ -15,6 +15,10 @@ public class Table {
     type = typeOof;
   }
 
+  public boolean IsValid() {
+    return limits.IsValid(2147483647);
+  }
+
   public String toString() {
     return "Table {"+limits+", type: "+type+", values: " + values + "}";
   }

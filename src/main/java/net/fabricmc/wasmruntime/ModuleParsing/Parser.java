@@ -341,7 +341,7 @@ public class Parser {
               memory[j + memoryOffset] = data[j];
             }
           } catch (ArrayIndexOutOfBoundsException e) {
-            throw new WasmParseError("Not enough memory to be able to store the data at index "+index);
+            throw new WasmParseError("Not enough memory to be able to store the data at index " + memoryOffset);
           }
         }
         break;

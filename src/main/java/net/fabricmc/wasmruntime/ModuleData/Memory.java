@@ -10,6 +10,10 @@ public class Memory {
     data = new byte[limit.min << 16];
   }
 
+  public boolean IsValid() {
+    return limit.IsValid(65535);
+  }
+
   public String toString() {
     String dataString = "";
     for (int i = 0; i < data.length; i++) {
