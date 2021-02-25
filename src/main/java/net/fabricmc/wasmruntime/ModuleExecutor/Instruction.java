@@ -10,4 +10,8 @@ public class Instruction {
     operation = operationOof;
     immediates = immediatesOof;
   }
+
+  public String toString() {
+    return operation + " " + immediates;
+  }
 }

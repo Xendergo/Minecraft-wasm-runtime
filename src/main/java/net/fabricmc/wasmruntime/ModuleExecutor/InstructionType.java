@@ -8,11 +8,16 @@ import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
 public class InstructionType {
   Consumer<ValueStack> operation;
   FunctionType type;
-  WasmType[] immediates;
+  public WasmType[] immediates;
 
   public InstructionType(Consumer<ValueStack> operationOof, FunctionType typeOof, WasmType[] immediatesOof) {
     operation = operationOof;
     type = typeOof;
     immediates = immediatesOof;
+  }
+
+  @Override
+  public String toString() {
+    return "type: " + type;
   }
 }

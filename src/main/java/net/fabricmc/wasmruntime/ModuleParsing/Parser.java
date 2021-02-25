@@ -1,7 +1,6 @@
 package net.fabricmc.wasmruntime.ModuleParsing;
 
 import net.fabricmc.wasmruntime.ModuleData.Code;
-import net.fabricmc.wasmruntime.ModuleData.ConstantExpression;
 import net.fabricmc.wasmruntime.ModuleData.Export;
 import net.fabricmc.wasmruntime.ModuleData.Expression;
 import net.fabricmc.wasmruntime.ModuleData.FunctionType;
@@ -11,12 +10,15 @@ import net.fabricmc.wasmruntime.ModuleData.ImportedGlobal;
 import net.fabricmc.wasmruntime.ModuleData.Limit;
 import net.fabricmc.wasmruntime.ModuleData.Memory;
 import net.fabricmc.wasmruntime.ModuleData.Module;
+import net.fabricmc.wasmruntime.ModuleData.Opcodes;
 import net.fabricmc.wasmruntime.ModuleData.WasmFunction;
 import net.fabricmc.wasmruntime.ModuleData.Table;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.ElementType;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.ExportTypes;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
 import net.fabricmc.wasmruntime.ModuleExecutor.ExecExpression;
+import net.fabricmc.wasmruntime.ModuleExecutor.Instruction;
+import net.fabricmc.wasmruntime.ModuleExecutor.InstructionType;
 import net.fabricmc.wasmruntime.ModuleExecutor.Value;
 import net.fabricmc.wasmruntime.ModuleExecutor.ValueF32;
 import net.fabricmc.wasmruntime.ModuleExecutor.ValueF64;
@@ -26,6 +28,7 @@ import net.fabricmc.wasmruntime.ModuleExecutor.ValueI64;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 import net.fabricmc.wasmruntime.Errors.WasmParseError;
@@ -57,21 +60,21 @@ public class Parser {
         for (int i = 0; i < typeAmt; i++) {
           if (bytes[index] == 0x60) {
             index++;
-
             
             int inputAmt = readInt(bytes, index);
             index += offset;
             
-            int outputAmt = readInt(bytes, index);
-            index += offset;
-
             WasmType[] in = new WasmType[inputAmt];
-            WasmType[] out = new WasmType[outputAmt];
-            
+
             for (int j = 0; j < inputAmt; j++) {
               in[j] = WasmType.typeMap.get(bytes[index]);
               index++;
             }
+
+            int outputAmt = readInt(bytes, index);
+            index += offset;
+
+            WasmType[] out = new WasmType[outputAmt];
 
             for (int j = 0; j < outputAmt; j++) {
               out[j] = WasmType.typeMap.get(bytes[index]);
@@ -182,10 +185,11 @@ public class Parser {
           index += 2;
           WasmType type = WasmType.typeMap.get(bytes[index-2]);
           boolean mutable = bytes[index-1] == 0;
-          ConstantExpression expr = new ConstantExpression(readExpr(bytes, index), type);
+          Expression expr = readExpr(bytes, index);
+          expr.type = new FunctionType(type);
           index += offset;
 
-          if (!expr.IsValid()) {
+          if (!expr.IsValid(true)) {
             throw new WasmParseError("Invalid global initializer with global index " + i);
           }
           Value ret = ExecExpression.Exec(expr).stack[0];
@@ -269,10 +273,11 @@ public class Parser {
           int tableIndex = readInt(bytes, index);
           index += offset;
 
-          ConstantExpression expr = new ConstantExpression(readExpr(bytes, index), WasmType.i32);
+          Expression expr = readExpr(bytes, index);
+          expr.type = new FunctionType(WasmType.i32);
           index += offset;
 
-          if (!expr.IsValid()) {
+          if (!expr.IsValid(true)) {
             throw new WasmParseError("Constant expression for offset of values in table "+tableIndex+" is invalid");
           }
 
@@ -313,7 +318,7 @@ public class Parser {
             }
           }
 
-          Expression expr = new Expression(readExpr(bytes, index));
+          Expression expr = readExpr(bytes, index);
           index += offset;
 
           module.Codes.add(new Code(locals, expr));
@@ -328,10 +333,11 @@ public class Parser {
           int memoryIndex = readInt(bytes, index);
           index += offset;
 
-          ConstantExpression expr = new ConstantExpression(readExpr(bytes, index), WasmType.i32);
+          Expression expr = readExpr(bytes, index);
+          expr.type = new FunctionType(WasmType.i32);
           index += offset;
 
-          if (!expr.IsValid()) {
+          if (!expr.IsValid(true)) {
             throw new WasmParseError("Constant expression for offset of data index " + i + "is invalid");
           }
 
@@ -361,6 +367,8 @@ public class Parser {
       if (index >= bytes.length) break;
     }
 
+    System.out.println(module.Codes);
+
     return module;
   }
 
@@ -386,6 +394,31 @@ public class Parser {
     }
 
     return result;
+  }
+
+  public static long readLong(byte[] bytes, int start) {
+    long result = 0;
+    offset = 0;
+    while (true) {
+      long reading = bytes[start+offset];
+      result |= (reading & 0x7F) << (offset * 7);
+      offset++;
+
+      if (reading >> 7 == 0)
+        break;
+    }
+
+    return result;
+  }
+
+  public static float readFloat(byte[] bytes, int start) {
+    offset = 4;
+    return Float.intBitsToFloat((bytes[start] & 255) | (bytes[start + 1] & 255) << 8 | (bytes[start + 2] & 255) << 16 | (bytes[start + 3] & 255) << 24);
+  }
+
+  public static double readDouble(byte[] bytes, int start) {
+    offset = 8;
+    return Double.longBitsToDouble(((long) bytes[start] & 255) | ((long) bytes[start + 1] & 255) << 8 | ((long) bytes[start + 2] & 255) << 16 ^ ((long) bytes[start + 3] & 255) << 24 | ((long) bytes[start + 4] & 255) << 32 | ((long) bytes[start + 5] & 255) << 40 | ((long) bytes[start + 6] & 255) << 48 | ((long) bytes[start + 7] & 255) << 56);
   }
 
   public static String readName(byte[] bytes, int start) {
@@ -416,25 +449,109 @@ public class Parser {
   /*
   TODO: Make this skip immediate values
   */
-  public static byte[] readExpr(byte[] bytes, int start) {
-    int blockDepth = 0;
+  public static Expression readExpr(byte[] bytes, int index) throws WasmParseError {
+    List<Instruction> instructions = new LinkedList<Instruction>();
+    List<Expression> blocks = new LinkedList<Expression>();
 
-    int originalStart = start;
+    int originalStart = index;
 
-    while (blockDepth != 0 || bytes[start] != 0x0B) {
-      if (bytes[start] == 0x0B) {
-        blockDepth--;
+    while (bytes[index] != 0x0B && bytes[index] != 0x05) {
+      switch (bytes[index]) {
+        case 0x02:
+        index++;
+        blocks.add(readExpr(bytes, index));
+        index += offset;
+        // TODO: Go into the block when reached
+        break;
+
+        case 0x03:
+        index++;
+        blocks.add(readExpr(bytes, index));
+        index += offset;
+        // TODO: Go to block when reached and loop when execution ends
+        break;
+
+        case 0x04:
+        index++;
+        blocks.add(readExpr(bytes, index));
+        index += offset;
+
+        if (bytes[index - 1] == 0x05) {
+          blocks.add(readExpr(bytes, index));
+          index += offset;
+          // TODO: Go to else block if condition is false
+        }
+        // TODO: Go to block when reached if condition is true
+        break;
+
+        case 0x0C:
+        // TODO: Break instruction
+        break;
+
+        case 0x0D:
+        // TODO: Break if instruction
+        break;
+
+        case 0x0E:
+        // TODO: Break table instruction
+        break;
+
+        case 0x0F:
+        // TODO: Return instruction
+        break;
+
+        case 0x10:
+        // TODO: Call instruction
+        break;
+
+        case 0x11:
+        // TODO: Call indirect instruction
+        break;
+
+        default:
+        InstructionType type;
+
+        if (bytes[index] == 0xFC) {
+          type = Opcodes.truncMap.get(bytes[index + 1]);
+          index += 2;
+        } else {
+          type = Opcodes.opcodeMap.get(bytes[index]);
+          index++;
+        }
+
+        List<Value> immediates = new ArrayList<Value>();
+
+        for (WasmType wasmType : type.immediates) {
+          switch (wasmType) {
+            case i32:
+            immediates.add(new ValueI32(readInt(bytes, index)));
+            break;
+
+            case i64:
+            immediates.add(new ValueI64(readLong(bytes, index)));
+            break;
+
+            case f32:
+            immediates.add(new ValueF32(readFloat(bytes, index)));
+            break;
+
+            case f64:
+            immediates.add(new ValueF64(readDouble(bytes, index)));
+            break;
+
+            default:
+            throw new WasmParseError("Can't use type " + wasmType + "as an immediate");
+          }
+
+          index += offset;
+        }
+
+        instructions.add(new Instruction(type, immediates));
       }
-
-      if (bytes[start] > 0x01 && bytes[start] < 0x05) {
-        blockDepth++;
-      }
-
-      start++;
     }
 
-    offset = start - originalStart + 1;
+    offset = index - originalStart + 1;
 
-    return Arrays.copyOfRange(bytes, originalStart, start);
+    return new Expression(instructions.toArray(new Instruction[0]), blocks);
   }
 }
