@@ -58,22 +58,23 @@ public class Parser {
           if (bytes[index] == 0x60) {
             index++;
 
-            ArrayList<WasmType> in = new ArrayList<WasmType>();
-            ArrayList<WasmType> out = new ArrayList<WasmType>();
-
+            
             int inputAmt = readInt(bytes, index);
             index += offset;
-
-            for (int j = 0; j < inputAmt; j++) {
-              in.add(WasmType.typeMap.get(bytes[index]));
-              index++;
-            }
-
+            
             int outputAmt = readInt(bytes, index);
             index += offset;
 
+            WasmType[] in = new WasmType[inputAmt];
+            WasmType[] out = new WasmType[outputAmt];
+            
+            for (int j = 0; j < inputAmt; j++) {
+              in[j] = WasmType.typeMap.get(bytes[index]);
+              index++;
+            }
+
             for (int j = 0; j < outputAmt; j++) {
-              out.add(WasmType.typeMap.get(bytes[index]));
+              out[j] = WasmType.typeMap.get(bytes[index]);
               index++;
             }
 
@@ -130,6 +131,9 @@ public class Parser {
               case f64:
               module.Globals.add(new ImportedGlobal<ValueF64>(moduleName, importName, mutable));
               break;
+
+              default:
+              throw new WasmParseError("Mystery type " + type + " being imported as a global");
             }
             break;
 
@@ -202,6 +206,9 @@ public class Parser {
             case f64:
             module.Globals.add(new Global<ValueF64>((ValueF64)ret, mutable));
             break;
+
+            default:
+            throw new WasmParseError("Mystery type " + type + " being used as a global");
           }
         }
         break;

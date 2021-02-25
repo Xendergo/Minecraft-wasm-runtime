@@ -7,7 +7,8 @@ public enum WasmType {
   i64,
   f32,
   f64,
-  any;
+  any,
+  T;
 
   public static HashMap<Byte, WasmType> typeMap = new HashMap<Byte, WasmType>();
 
