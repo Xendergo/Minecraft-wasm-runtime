@@ -12,6 +12,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.lib.gson.JsonReader;
 import net.fabricmc.wasmruntime.Errors.WasmParseError;
+import net.fabricmc.wasmruntime.Errors.WasmValidationError;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.WorldSavePath;
 
@@ -54,6 +55,8 @@ public class WasmRuntime implements ModInitializer {
 							System.out.printf("Error reading file %s\n", modulePath);
 						} catch (WasmParseError e) {
 							System.out.printf("Error parsing file %s: %s\n", modulePath, e.toString());
+						} catch (WasmValidationError e) {
+							System.out.printf("Error validating file %s: %s\n", modulePath, e.toString());
 						}
 					}
 

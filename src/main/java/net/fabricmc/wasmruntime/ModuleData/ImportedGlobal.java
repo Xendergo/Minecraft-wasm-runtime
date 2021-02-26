@@ -1,13 +1,14 @@
 package net.fabricmc.wasmruntime.ModuleData;
 
+import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
 import net.fabricmc.wasmruntime.ModuleExecutor.Value;
 
 public class ImportedGlobal<T extends Value> extends Global<T> {
   public String module;
   public String name;
 
-	public ImportedGlobal(String moduleOof, String nameOof, boolean mutableOof) {
-		super(null, mutableOof);
+	public ImportedGlobal(String moduleOof, String nameOof, boolean mutableOof, WasmType type) {
+		super(null, mutableOof, type);
 
     module = moduleOof;
     name = nameOof;

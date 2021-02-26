@@ -11,8 +11,8 @@ import net.fabricmc.wasmruntime.ModuleData.Limit;
 import net.fabricmc.wasmruntime.ModuleData.Memory;
 import net.fabricmc.wasmruntime.ModuleData.Module;
 import net.fabricmc.wasmruntime.ModuleData.Opcodes;
-import net.fabricmc.wasmruntime.ModuleData.WasmFunction;
 import net.fabricmc.wasmruntime.ModuleData.Table;
+import net.fabricmc.wasmruntime.ModuleData.WasmFunction;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.ElementType;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.ExportTypes;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
@@ -102,8 +102,8 @@ public class Parser {
           switch (bytes[index]) {
             case 0x00:
             index++;
-            module.Functions.add(new ImportedFunction(moduleName, importName, bytes[index]));
-            index++;
+            module.Functions.add(new ImportedFunction(moduleName, importName, module.TypeSection.get(readInt(bytes, index))));
+            index += offset;
             break;
 
             case 0x01:
@@ -120,19 +120,19 @@ public class Parser {
 
             switch (type) {
               case i32:
-              module.Globals.add(new ImportedGlobal<ValueI32>(moduleName, importName, mutable));
+              module.Globals.add(new ImportedGlobal<ValueI32>(moduleName, importName, mutable, WasmType.i32));
               break;
 
               case i64:
-              module.Globals.add(new ImportedGlobal<ValueI64>(moduleName, importName, mutable));
+              module.Globals.add(new ImportedGlobal<ValueI64>(moduleName, importName, mutable, WasmType.i64));
               break;
 
               case f32:
-              module.Globals.add(new ImportedGlobal<ValueF32>(moduleName, importName, mutable));
+              module.Globals.add(new ImportedGlobal<ValueF32>(moduleName, importName, mutable, WasmType.f32));
               break;
 
               case f64:
-              module.Globals.add(new ImportedGlobal<ValueF64>(moduleName, importName, mutable));
+              module.Globals.add(new ImportedGlobal<ValueF64>(moduleName, importName, mutable, WasmType.f64));
               break;
 
               default:
@@ -151,7 +151,7 @@ public class Parser {
         index += offset;
 
         for (int i = 0; i < functionAmt; i++) {
-          module.Functions.add(new WasmFunction(readInt(bytes, index)));
+          module.FunctionTypeIndices.add(readInt(bytes, index));
           index += offset;
         }
         break;
@@ -189,26 +189,26 @@ public class Parser {
           expr.type = new FunctionType(type);
           index += offset;
 
-          if (!expr.IsValid(true)) {
+          if (!expr.IsValid(true, module.Globals.toArray(new Global[0]))) {
             throw new WasmParseError("Invalid global initializer with global index " + i);
           }
           Value ret = ExecExpression.Exec(expr).stack[0];
 
           switch (type) {
             case i32:
-            module.Globals.add(new Global<ValueI32>((ValueI32)ret, mutable));
+            module.Globals.add(new Global<ValueI32>((ValueI32)ret, mutable, WasmType.i32));
             break;
 
             case i64:
-            module.Globals.add(new Global<ValueI64>((ValueI64)ret, mutable));
+            module.Globals.add(new Global<ValueI64>((ValueI64)ret, mutable, WasmType.i64));
             break;
 
             case f32:
-            module.Globals.add(new Global<ValueF32>((ValueF32)ret, mutable));
+            module.Globals.add(new Global<ValueF32>((ValueF32)ret, mutable, WasmType.f32));
             break;
 
             case f64:
-            module.Globals.add(new Global<ValueF64>((ValueF64)ret, mutable));
+            module.Globals.add(new Global<ValueF64>((ValueF64)ret, mutable, WasmType.f64));
             break;
 
             default:
@@ -277,7 +277,7 @@ public class Parser {
           expr.type = new FunctionType(WasmType.i32);
           index += offset;
 
-          if (!expr.IsValid(true)) {
+          if (!expr.IsValid(true, module.Globals.toArray(new Global[0]))) {
             throw new WasmParseError("Constant expression for offset of values in table "+tableIndex+" is invalid");
           }
 
@@ -320,8 +320,13 @@ public class Parser {
 
           Expression expr = readExpr(bytes, index);
           index += offset;
+          expr.type = module.TypeSection.get(module.FunctionTypeIndices.get(module.Codes.size()));
 
-          module.Codes.add(new Code(locals, expr));
+          Code code = new Code(locals, expr);
+
+          module.Functions.add(new WasmFunction(code));
+
+          module.Codes.add(code);
         }
         break;
 
@@ -337,7 +342,7 @@ public class Parser {
           expr.type = new FunctionType(WasmType.i32);
           index += offset;
 
-          if (!expr.IsValid(true)) {
+          if (!expr.IsValid(true, module.Globals.toArray(new Global[0]))) {
             throw new WasmParseError("Constant expression for offset of data index " + i + "is invalid");
           }
 
@@ -446,9 +451,6 @@ public class Parser {
     System.out.println(str);
   }
 
-  /*
-  TODO: Make this skip immediate values
-  */
   public static Expression readExpr(byte[] bytes, int index) throws WasmParseError {
     List<Instruction> instructions = new LinkedList<Instruction>();
     List<Expression> blocks = new LinkedList<Expression>();

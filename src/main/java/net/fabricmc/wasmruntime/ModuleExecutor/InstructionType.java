@@ -3,17 +3,26 @@ package net.fabricmc.wasmruntime.ModuleExecutor;
 import java.util.function.Consumer;
 
 import net.fabricmc.wasmruntime.ModuleData.FunctionType;
+import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.GenericTypeRequirers;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
 
 public class InstructionType {
   Consumer<ValueStack> operation;
-  FunctionType type;
+  public FunctionType type;
   public WasmType[] immediates;
+  public GenericTypeRequirers genericTypeUse = GenericTypeRequirers.none;
 
   public InstructionType(Consumer<ValueStack> operationOof, FunctionType typeOof, WasmType[] immediatesOof) {
     operation = operationOof;
     type = typeOof;
     immediates = immediatesOof;
+  }
+
+  public InstructionType(Consumer<ValueStack> operationOof, FunctionType typeOof, WasmType[] immediatesOof, GenericTypeRequirers genericTypeUseOof) {
+    operation = operationOof;
+    type = typeOof;
+    immediates = immediatesOof;
+    genericTypeUse = genericTypeUseOof;
   }
 
   @Override

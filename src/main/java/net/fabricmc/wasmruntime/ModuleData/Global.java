@@ -1,14 +1,17 @@
 package net.fabricmc.wasmruntime.ModuleData;
 
+import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
 import net.fabricmc.wasmruntime.ModuleExecutor.Value;
 
 public class Global<T extends Value> {
   private T value;
   public boolean mutable;
+  public WasmType type;
 
-  public Global(T valueOof, boolean mutableOof) {
+  public Global(T valueOof, boolean mutableOof, WasmType typeOof) {
     value = valueOof;
     mutable = mutableOof;
+    type = typeOof;
   }
 
   public T getValue() {

@@ -21,6 +21,14 @@ public class FunctionType {
     outputs = new WasmType[0];
   }
 
+  public FunctionType(FunctionType type) {
+    inputs = new WasmType[type.inputs.length];
+    outputs = new WasmType[type.outputs.length];
+
+    System.arraycopy(type.inputs, 0, inputs, 0, type.inputs.length);
+    System.arraycopy(type.outputs, 0, outputs, 0, type.outputs.length);
+  }
+
   public String toString() {
     return inputs + "=>" + outputs;
   }

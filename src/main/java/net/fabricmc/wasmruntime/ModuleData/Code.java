@@ -7,11 +7,15 @@ import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
 
 public class Code {
   List<WasmType> locals = new ArrayList<WasmType>();
-  Expression expr;
+  public Expression expr;
 
   public Code(List<WasmType> localsOof, Expression exprOof) {
     locals = localsOof;
     expr = exprOof;
+  }
+
+  public boolean IsValid(Global<?>[] globals) {
+    return expr.IsValid(false, globals);
   }
 
   public String toString() {
