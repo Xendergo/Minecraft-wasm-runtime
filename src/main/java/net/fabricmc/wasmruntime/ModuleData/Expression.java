@@ -9,6 +9,7 @@ import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
 import net.fabricmc.wasmruntime.ModuleExecutor.Instruction;
 import net.fabricmc.wasmruntime.ModuleExecutor.InstructionType;
 import net.fabricmc.wasmruntime.ModuleExecutor.ValueI32;
+import net.fabricmc.wasmruntime.ModuleExecutor.ValueStack;
 
 public class Expression {
   public Instruction[] bytecode;
@@ -76,17 +77,25 @@ public class Expression {
             return false;
           }
 
+          
           for (int j = 0; j < instrType.inputs.length; j++) {
             if (instrType.inputs[j] == WasmType.T) {
               instrType.inputs[j] = genericType;
             }
           }
-
+          
           for (int j = 0; j < instrType.outputs.length; j++) {
             if (instrType.outputs[j] == WasmType.T) {
               instrType.outputs[j] = genericType;
             }
           }
+        }
+        
+        if (op.invokesBlock) {
+          Expression block = Blocks.get(((ValueI32)instr.immediates.get(0)).value);
+          block.isBlock = true;
+          block.locals = locals;
+          if (!block.IsValid(isConstant, globals)) return false;
         }
 
         for (int j = instrType.inputs.length - 1; j >= 0; j--) {
@@ -104,18 +113,24 @@ public class Expression {
         }
 
         System.out.println(typeStack);
-        System.out.println(stackSize);
       }
 
       System.out.println("done validating");
 
-      stackSize += 2; // just in case...
+      stackSize += 3; // Solves an edge case where the stack size is largest before the first operation is executed
     } catch (Exception e) {
       e.printStackTrace();
       return false;
     }
 
     return true;
+  }
+
+  /*
+  TODO: this
+  */
+  public void enterBlock(ValueStack stack) {
+    
   }
 
   public String toString() {

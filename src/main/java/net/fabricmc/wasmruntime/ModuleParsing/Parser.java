@@ -185,7 +185,7 @@ public class Parser {
           index += 2;
           WasmType type = WasmType.typeMap.get(bytes[index-2]);
           boolean mutable = bytes[index-1] == 0;
-          Expression expr = readExpr(bytes, index);
+          Expression expr = readExpr(bytes, index, module);
           expr.type = new FunctionType(type);
           index += offset;
 
@@ -273,7 +273,7 @@ public class Parser {
           int tableIndex = readInt(bytes, index);
           index += offset;
 
-          Expression expr = readExpr(bytes, index);
+          Expression expr = readExpr(bytes, index, module);
           expr.type = new FunctionType(WasmType.i32);
           index += offset;
 
@@ -318,7 +318,7 @@ public class Parser {
             }
           }
 
-          Expression expr = readExpr(bytes, index);
+          Expression expr = readExpr(bytes, index, module);
           index += offset;
           expr.type = module.TypeSection.get(module.FunctionTypeIndices.get(module.Codes.size()));
 
@@ -338,7 +338,7 @@ public class Parser {
           int memoryIndex = readInt(bytes, index);
           index += offset;
 
-          Expression expr = readExpr(bytes, index);
+          Expression expr = readExpr(bytes, index, module);
           expr.type = new FunctionType(WasmType.i32);
           index += offset;
 
@@ -447,40 +447,75 @@ public class Parser {
     return new Limit(min, max);
   }
 
+  public static FunctionType readBlockType(byte[] bytes, int start, Module module) {
+    offset = 1;
+    if (bytes[start] == 0x40) {
+      return new FunctionType();
+    }
+
+    WasmType maybeType = WasmType.typeMap.get(bytes[start]);
+
+    if (maybeType == null) {
+      return module.TypeSection.get(readInt(bytes, start)); // Offset is changed in readint
+    } else {
+      return new FunctionType(maybeType);
+    }
+  }
+
   public static void printWarning(String str) {
     System.out.println(str);
   }
 
-  public static Expression readExpr(byte[] bytes, int index) throws WasmParseError {
+  /*
+  TODO: Instructions that add new local variables
+  */
+  public static Expression readExpr(byte[] bytes, int index, Module module) throws WasmParseError {
     List<Instruction> instructions = new LinkedList<Instruction>();
     List<Expression> blocks = new LinkedList<Expression>();
+
+    Expression expr = new Expression(new Instruction[0], blocks);
 
     int originalStart = index;
 
     while (bytes[index] != 0x0B && bytes[index] != 0x05) {
+      FunctionType blockType;
+      Expression block;
       switch (bytes[index]) {
         case 0x02:
         index++;
-        blocks.add(readExpr(bytes, index));
+        blockType = readBlockType(bytes, index, module);
         index += offset;
-        // TODO: Go into the block when reached
+        block = readExpr(bytes, index, module);
+        block.type = blockType;
+        blocks.add(block);
+        index += offset;
+        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new Value[] {new ValueI32(0)})));
         break;
 
         case 0x03:
         index++;
-        blocks.add(readExpr(bytes, index));
+        blockType = readBlockType(bytes, index, module);
         index += offset;
-        // TODO: Go to block when reached and loop when execution ends
+        block = readExpr(bytes, index, module);
+        block.type = blockType;
+        blocks.add(block);
+        // TODO: Go to block when reached and implement looping
         break;
 
         case 0x04:
         index++;
-        blocks.add(readExpr(bytes, index));
+        blockType = readBlockType(bytes, index, module);
         index += offset;
+        block = readExpr(bytes, index, module);
+        block.type = blockType;
+        blocks.add(block);
 
         if (bytes[index - 1] == 0x05) {
-          blocks.add(readExpr(bytes, index));
+          blockType = readBlockType(bytes, index, module);
           index += offset;
+          block = readExpr(bytes, index, module);
+          block.type = blockType;
+          blocks.add(block);
           // TODO: Go to else block if condition is false
         }
         // TODO: Go to block when reached if condition is true
@@ -552,8 +587,9 @@ public class Parser {
       }
     }
 
+    expr.bytecode = instructions.toArray(new Instruction[0]);
     offset = index - originalStart + 1;
 
-    return new Expression(instructions.toArray(new Instruction[0]), blocks);
+    return expr;
   }
 }

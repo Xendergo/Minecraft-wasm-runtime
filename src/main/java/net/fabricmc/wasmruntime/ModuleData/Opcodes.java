@@ -5,9 +5,12 @@ import java.util.HashMap;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.GenericTypeRequirers;
 import net.fabricmc.wasmruntime.ModuleData.HelpfulEnums.WasmType;
 import net.fabricmc.wasmruntime.ModuleExecutor.InstructionType;
+import net.fabricmc.wasmruntime.ModuleExecutor.Value;
 import net.fabricmc.wasmruntime.ModuleExecutor.ValueStack;
 
 public class Opcodes {
+  public static Value[] immediates;
+  
   static FunctionType nop = new FunctionType();
   static FunctionType drop = new FunctionType(new WasmType[] {WasmType.any}, new WasmType[0]);
   static FunctionType get = new FunctionType(WasmType.T);
