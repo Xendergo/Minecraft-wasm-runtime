@@ -489,7 +489,7 @@ public class Parser {
         block.type = blockType;
         blocks.add(block);
         index += offset;
-        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new Value[] {new ValueI32(0)})));
+        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new Value[] {new ValueI32(blocks.size())})));
         break;
 
         case 0x03:
@@ -498,8 +498,10 @@ public class Parser {
         index += offset;
         block = readExpr(bytes, index, module);
         block.type = blockType;
+        block.isLoop = true;
+        index += offset;
+        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new Value[] {new ValueI32(blocks.size())})));
         blocks.add(block);
-        // TODO: Go to block when reached and implement looping
         break;
 
         case 0x04:
@@ -508,17 +510,30 @@ public class Parser {
         index += offset;
         block = readExpr(bytes, index, module);
         block.type = blockType;
+        int ifIndex = blocks.size();
         blocks.add(block);
+        index += offset;
 
+        int elseIndex = -1;
+        
         if (bytes[index - 1] == 0x05) {
-          blockType = readBlockType(bytes, index, module);
-          index += offset;
           block = readExpr(bytes, index, module);
           block.type = blockType;
+          elseIndex = blocks.size();
           blocks.add(block);
-          // TODO: Go to else block if condition is false
+          index += offset;
         }
-        // TODO: Go to block when reached if condition is true
+
+        WasmType[] newInput = new WasmType[blockType.inputs.length + 1];
+        System.arraycopy(blockType.inputs, 0, newInput, 0, blockType.inputs.length);
+        newInput[blockType.inputs.length] = WasmType.i32;
+        FunctionType newType = new FunctionType(newInput, blockType.outputs);
+
+        if (elseIndex != -1) {
+          instructions.add(new Instruction(new InstructionType(expr::enterBlockIfElse, newType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new Value[] {new ValueI32(ifIndex), new ValueI32(elseIndex)})));
+        } else {
+          instructions.add(new Instruction(new InstructionType(expr::enterBlockIf, newType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new Value[] {new ValueI32(ifIndex)})));
+        }
         break;
 
         case 0x0C:
