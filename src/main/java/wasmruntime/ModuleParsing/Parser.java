@@ -599,7 +599,12 @@ public class Parser {
         break;
 
         case 0x0F:
-        // TODO: Return instruction
+        newType = new FunctionType();
+        outputs = blockTypeStack.getLast().outputs;
+        newType.inputs = new WasmType[outputs.length];
+        System.arraycopy(outputs, 0, newType.inputs, 0, newType.inputs.length);
+
+        instructions.add(new Instruction(new InstructionType(Opcodes::branch, newType, new WasmType[] {WasmType.i32}), Arrays.asList(new ValueI32(blockTypeStack.size() - 1))));
         break;
 
         case 0x10:
