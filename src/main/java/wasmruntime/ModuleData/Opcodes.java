@@ -279,4 +279,12 @@ public class Opcodes {
       ExecExpression.branchDepth = i32(immediates[index]);
     }
   }
+
+  public static void call(ValueStack stack) {
+    stack.module.Functions.get(i32(immediates[0])).Exec(stack);
+  }
+
+  public static void callIndirect(ValueStack stack) {
+
+  }
 }

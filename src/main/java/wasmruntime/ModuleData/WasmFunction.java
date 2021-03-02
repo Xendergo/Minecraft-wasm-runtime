@@ -5,7 +5,6 @@ import wasmruntime.ModuleExecutor.ValueStack;
 
 public class WasmFunction extends WasmFunctionInterface {
   public Code code;
-  public FunctionType type;
 
   public WasmFunction(Code codeOof) {
     code = codeOof;
@@ -13,8 +12,8 @@ public class WasmFunction extends WasmFunctionInterface {
   }
 
   @Override
-  public ValueStack Exec() {
-    return ExecExpression.Exec(code.expr);
+  public void Exec(ValueStack stack) {
+    ExecExpression.Exec(code.expr, stack.module);
   }
 
   @Override

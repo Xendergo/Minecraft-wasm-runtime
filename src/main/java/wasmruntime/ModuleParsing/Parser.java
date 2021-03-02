@@ -194,7 +194,7 @@ public class Parser {
           if (!expr.IsValid(true, module.Globals.toArray(new Global[0]))) {
             throw new WasmParseError("Invalid global initializer with global index " + i);
           }
-          Value ret = ExecExpression.Exec(expr).stack[0];
+          Value ret = ExecExpression.Exec(expr, module).stack[0];
 
           switch (type) {
             case i32:
@@ -284,7 +284,7 @@ public class Parser {
             throw new WasmParseError("Constant expression for offset of values in table "+tableIndex+" is invalid");
           }
 
-          int tableOffset = ((ValueI32)ExecExpression.Exec(expr).stack[0]).value;
+          int tableOffset = ((ValueI32)ExecExpression.Exec(expr, module).stack[0]).value;
 
           int vecAmt = readInt(bytes, index);
           index += offset;
@@ -351,7 +351,7 @@ public class Parser {
             throw new WasmParseError("Constant expression for offset of data index " + i + "is invalid");
           }
 
-          int memoryOffset = ((ValueI32)ExecExpression.Exec(expr).stack[0]).value;
+          int memoryOffset = ((ValueI32)ExecExpression.Exec(expr, module).stack[0]).value;
 
           int byteAmt = readInt(bytes, index);
           index += offset;
@@ -608,11 +608,27 @@ public class Parser {
         break;
 
         case 0x10:
-        // TODO: Call instruction
+        int funcIndex = readInt(bytes, index);
+        index += offset;
+
+        if (module.Functions.size() <= funcIndex) throw new WasmParseError("There's no function at position " + funcIndex);
+
+        instructions.add(new Instruction(new InstructionType(Opcodes::call, module.Functions.get(funcIndex).type, new WasmType[] {WasmType.i32}), Arrays.asList(new ValueI32(funcIndex))));
         break;
 
         case 0x11:
-        // TODO: Call indirect instruction
+        if (module.Tables.size() == 0) throw new WasmParseError("Can't use call_indirect, there are no tables defined");
+        if (module.Tables.get(0).type != ElementType.funcref) throw new WasmParseError("Can't use call_indirect, table 0 is not of type funcref");
+
+        int typeIndex = readInt(bytes, index);
+        index += offset;
+
+        FunctionType oldType = module.TypeSection.get(typeIndex);
+        newType = new FunctionType(new WasmType[oldType.inputs.length + 1], oldType.outputs);
+        System.arraycopy(oldType.inputs, 0, newType.inputs, 0, oldType.inputs.length);
+        newType.inputs[newType.inputs.length - 1] = WasmType.i32;
+
+        instructions.add(new Instruction(new InstructionType(Opcodes::callIndirect, newType, new WasmType[] {WasmType.i32}), Arrays.asList(new ValueI32(typeIndex))));
         break;
 
         default:

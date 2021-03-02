@@ -35,7 +35,6 @@ public class Expression {
     locals = localsOof;
   }
 
-  // Will do this later
   public boolean IsValid(boolean isConstant, Global<?>[] globals) {
     try {
       System.out.println("Started validating");
@@ -115,6 +114,12 @@ public class Expression {
         }
 
         System.out.println(typeStack);
+      }
+
+      if (type.outputs.length != typeStack.size()) return false; // Output is wrong
+
+      for (int i = 0; i < type.outputs.length; i++) {
+        if (typeStack.pollFirst() != type.outputs[i]) return false; // Output is wrong
       }
 
       System.out.println("done validating");
