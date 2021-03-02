@@ -19,7 +19,7 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "net.fabricmc.wasmruntime.WasmRuntime"
+      "wasmruntime.WasmRuntime"
     ]
   },
 
