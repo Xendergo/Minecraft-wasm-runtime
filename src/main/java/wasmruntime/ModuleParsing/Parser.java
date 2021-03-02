@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import wasmruntime.Errors.WasmParseError;
 
@@ -488,6 +489,7 @@ public class Parser {
       Expression block;
       int branchDepth;
       FunctionType newType;
+      WasmType[] outputs;
       index++;
       switch (bytes[index - 1]) {
         case 0x02:
@@ -499,7 +501,7 @@ public class Parser {
         block.type = blockType;
         blocks.add(block);
         index += offset;
-        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new Value[] {new ValueI32(blocks.size() - 1)})));
+        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new ValueI32(blocks.size() - 1))));
         break;
 
         case 0x03:
@@ -511,7 +513,7 @@ public class Parser {
         block.type = blockType;
         block.isLoop = true;
         index += offset;
-        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new Value[] {new ValueI32(blocks.size() - 1)})));
+        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new ValueI32(blocks.size() - 1))));
         blocks.add(block);
         break;
 
@@ -543,36 +545,57 @@ public class Parser {
         newType = new FunctionType(newInput, blockType.outputs);
 
         if (elseIndex != -1) {
-          instructions.add(new Instruction(new InstructionType(expr::enterBlockIfElse, newType, new WasmType[] {WasmType.i32, WasmType.i32}, true), Arrays.asList(new Value[] {new ValueI32(ifIndex), new ValueI32(elseIndex)})));
+          instructions.add(new Instruction(new InstructionType(expr::enterBlockIfElse, newType, new WasmType[] {WasmType.i32, WasmType.i32}, true), Arrays.asList(new ValueI32(ifIndex), new ValueI32(elseIndex))));
         } else {
-          instructions.add(new Instruction(new InstructionType(expr::enterBlockIf, newType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new Value[] {new ValueI32(ifIndex)})));
+          instructions.add(new Instruction(new InstructionType(expr::enterBlockIf, newType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new ValueI32(ifIndex))));
         }
         break;
 
         case 0x0C:
         branchDepth = readInt(bytes, index);
         index += offset;
-        instructions.add(new Instruction(new InstructionType(Opcodes::branch, blockTypeStack.get(branchDepth), new WasmType[] {WasmType.i32}), Arrays.asList(new Value[] {new ValueI32(branchDepth)})));
+
+        newType = new FunctionType();
+        outputs = blockTypeStack.get(branchDepth).outputs;
+        newType.inputs = new WasmType[outputs.length];
+        System.arraycopy(outputs, 0, newType.inputs, 0, newType.inputs.length);
+
+        instructions.add(new Instruction(new InstructionType(Opcodes::branch, newType, new WasmType[] {WasmType.i32}), Arrays.asList(new ValueI32(branchDepth))));
         break;
 
         case 0x0D:
         branchDepth = readInt(bytes, index);
         index += offset;
         newType = new FunctionType();
-        WasmType[] inputs = blockTypeStack.get(branchDepth).inputs;
-        newType.inputs = new WasmType[inputs.length + 1];
-        System.arraycopy(inputs, 0, newType.inputs, 0, newType.inputs.length - 1);
+        outputs = blockTypeStack.get(branchDepth).outputs;
+        newType.inputs = new WasmType[outputs.length + 1];
+        System.arraycopy(outputs, 0, newType.inputs, 0, newType.inputs.length - 1);
         newType.inputs[newType.inputs.length - 1] = WasmType.i32;
 
-        newType.outputs = inputs;
+        newType.outputs = outputs;
 
-        System.out.println(newType);
-
-        instructions.add(new Instruction(new InstructionType(Opcodes::branchIf, newType, new WasmType[] {WasmType.i32}), Arrays.asList(new Value[] {new ValueI32(branchDepth)})));
+        instructions.add(new Instruction(new InstructionType(Opcodes::branchIf, newType, new WasmType[] {WasmType.i32}), Arrays.asList(new ValueI32(branchDepth))));
         break;
 
         case 0x0E:
-        // TODO: Break table instruction
+        int labelIndexAmt = readInt(bytes, index) + 1; // +1 to capture the default value
+        index += offset;
+        Integer[] labelIndexes = new Integer[labelIndexAmt];
+        int len = blockTypeStack.size();
+        for (int i = 0; i < labelIndexAmt; i++) {
+          labelIndexes[i] = readInt(bytes, index);
+          if (labelIndexes[i] >= len) {
+            throw new WasmParseError("Error parsing br_table instruction, there's no block with index " + labelIndexes[i]);
+          }
+          index += offset;
+        }
+
+        FunctionType defaultType = blockTypeStack.get(labelIndexes[labelIndexAmt - 1]);
+        newType = new FunctionType(new WasmType[defaultType.outputs.length + 1], new WasmType[0]);
+        System.arraycopy(defaultType.outputs, 0, newType.inputs, 0, newType.inputs.length - 1);
+        newType.inputs[newType.inputs.length - 1] = WasmType.i32;
+
+        instructions.add(new Instruction(new InstructionType(Opcodes::branchTable, newType, new WasmType[] {}), Arrays.stream(labelIndexes).map(ValueI32::fromInt).collect(Collectors.toList())));
         break;
 
         case 0x0F:
