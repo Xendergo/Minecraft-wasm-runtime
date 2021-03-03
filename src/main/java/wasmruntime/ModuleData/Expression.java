@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.commons.lang3.ArrayUtils;
+
 import wasmruntime.ModuleData.HelpfulEnums.GenericTypeRequirers;
 import wasmruntime.ModuleData.HelpfulEnums.WasmType;
 import wasmruntime.ModuleExecutor.Instruction;
@@ -37,15 +39,18 @@ public class Expression {
 
   public boolean IsValid(boolean isConstant, Global<?>[] globals) {
     try {
-      System.out.println("Started validating");
       LinkedList<WasmType> typeStack = new LinkedList<WasmType>();
 
-      if (!isBlock) {
-        locals = type.inputs;
-      } else {
+      WasmType[] thisLocals;
+
+      if (isBlock) {
         for (WasmType input : type.inputs) {
           typeStack.add(input);
         }
+
+        thisLocals = locals;
+      } else {
+        thisLocals = ArrayUtils.addAll(type.inputs, locals);
       }
 
       for (int i = 0; i < bytecode.length; i++) {
@@ -61,7 +66,7 @@ public class Expression {
 
           switch (op.genericTypeUse) {
             case local:
-            genericType = locals[((ValueI32)instr.immediates.get(0)).value];
+            genericType = thisLocals[((ValueI32)instr.immediates.get(0)).value];
             break;
 
             case global:
@@ -95,7 +100,7 @@ public class Expression {
         if (op.invokesBlock) {
           Expression block = Blocks.get(((ValueI32)instr.immediates.get(0)).value);
           block.isBlock = true;
-          block.locals = locals;
+          block.locals = thisLocals;
           if (!block.IsValid(isConstant, globals)) return false;
         }
 
@@ -112,8 +117,6 @@ public class Expression {
         if (stackSize < typeStack.size()) {
           stackSize = typeStack.size();
         }
-
-        System.out.println(typeStack);
       }
 
       if (type.outputs.length != typeStack.size()) return false; // Output is wrong
@@ -121,8 +124,6 @@ public class Expression {
       for (int i = 0; i < type.outputs.length; i++) {
         if (typeStack.pollFirst() != type.outputs[i]) return false; // Output is wrong
       }
-
-      System.out.println("done validating");
 
       stackSize += 3; // Solves an edge case where the stack size is largest before the first operation is executed
     } catch (Exception e) {

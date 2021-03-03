@@ -1,5 +1,6 @@
 package wasmruntime.ModuleParsing;
 
+import wasmruntime.ModuleData.BlockType;
 import wasmruntime.ModuleData.Code;
 import wasmruntime.ModuleData.Export;
 import wasmruntime.ModuleData.Expression;
@@ -186,9 +187,9 @@ public class Parser {
           index += 2;
           WasmType type = WasmType.typeMap.get(bytes[index-2]);
           boolean mutable = bytes[index-1] == 0;
-          blockTypeStack.addFirst(new FunctionType(type));
-          Expression expr = readExpr(bytes, index, module);
-          expr.type = blockTypeStack.pollFirst();
+          blockTypeStack.addFirst(new BlockType(new FunctionType(type)));
+          Expression expr = readExpr(bytes, index, module, new WasmType[0]);
+          expr.type = blockTypeStack.pollFirst().type;
           index += offset;
 
           if (!expr.IsValid(true, module.Globals.toArray(new Global[0]))) {
@@ -275,9 +276,9 @@ public class Parser {
           int tableIndex = readInt(bytes, index);
           index += offset;
 
-          blockTypeStack.addFirst(new FunctionType(WasmType.i32));
-          Expression expr = readExpr(bytes, index, module);
-          expr.type = blockTypeStack.pollFirst();
+          blockTypeStack.addFirst(new BlockType(new FunctionType(WasmType.i32)));
+          Expression expr = readExpr(bytes, index, module, new WasmType[0]);
+          expr.type = blockTypeStack.pollFirst().type;
           index += offset;
 
           if (!expr.IsValid(true, module.Globals.toArray(new Global[0]))) {
@@ -308,6 +309,7 @@ public class Parser {
           index += offset;
 
           List<WasmType> locals = new ArrayList<WasmType>();
+
           for (int j = 0; j < localsAmt; j++) {
             int amt = readInt(bytes, index);
             index+=offset;
@@ -321,10 +323,10 @@ public class Parser {
             }
           }
 
-          blockTypeStack.addFirst(module.TypeSection.get(module.FunctionTypeIndices.get(module.Codes.size())));
-          Expression expr = readExpr(bytes, index, module);
+          blockTypeStack.addFirst(new BlockType(module.TypeSection.get(module.FunctionTypeIndices.get(module.Codes.size()))));
+          Expression expr = readExpr(bytes, index, module, locals.toArray(new WasmType[0]));
           index += offset;
-          expr.type = blockTypeStack.pollFirst();
+          expr.type = blockTypeStack.pollFirst().type;
 
           Code code = new Code(locals, expr);
 
@@ -342,9 +344,9 @@ public class Parser {
           int memoryIndex = readInt(bytes, index);
           index += offset;
 
-          blockTypeStack.addFirst(new FunctionType(WasmType.i32));
-          Expression expr = readExpr(bytes, index, module);
-          expr.type = blockTypeStack.pollFirst();
+          blockTypeStack.addFirst(new BlockType(new FunctionType(WasmType.i32)));
+          Expression expr = readExpr(bytes, index, module, new WasmType[0]);
+          expr.type = blockTypeStack.pollFirst().type;
           index += offset;
 
           if (!expr.IsValid(true, module.Globals.toArray(new Global[0]))) {
@@ -471,16 +473,14 @@ public class Parser {
     System.out.println(str);
   }
 
-  private static LinkedList<FunctionType> blockTypeStack = new LinkedList<FunctionType>();
+  private static LinkedList<BlockType> blockTypeStack = new LinkedList<BlockType>();
 
-  /*
-  TODO: Function locals
-  */
-  public static Expression readExpr(byte[] bytes, int index, Module module) throws WasmParseError {
+  public static Expression readExpr(byte[] bytes, int index, Module module, WasmType[] locals) throws WasmParseError {
     List<Instruction> instructions = new LinkedList<Instruction>();
     List<Expression> blocks = new LinkedList<Expression>();
 
     Expression expr = new Expression(new Instruction[0], blocks);
+    expr.locals = locals;
 
     int originalStart = index;
 
@@ -495,8 +495,8 @@ public class Parser {
         case 0x02:
         blockType = readBlockType(bytes, index, module);
         index += offset;
-        blockTypeStack.addFirst(blockType);
-        block = readExpr(bytes, index, module);
+        blockTypeStack.addFirst(new BlockType(blockType));
+        block = readExpr(bytes, index, module, locals);
         blockTypeStack.pollFirst();
         block.type = blockType;
         blocks.add(block);
@@ -507,21 +507,21 @@ public class Parser {
         case 0x03:
         blockType = readBlockType(bytes, index, module);
         index += offset;
-        blockTypeStack.addFirst(blockType);
-        block = readExpr(bytes, index, module);
+        blockTypeStack.addFirst(new BlockType(blockType, true));
+        block = readExpr(bytes, index, module, locals);
         blockTypeStack.pollFirst();
         block.type = blockType;
         block.isLoop = true;
         index += offset;
-        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new ValueI32(blocks.size() - 1))));
+        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new ValueI32(blocks.size()))));
         blocks.add(block);
         break;
 
         case 0x04:
         blockType = readBlockType(bytes, index, module);
         index += offset;
-        blockTypeStack.addFirst(blockType);
-        block = readExpr(bytes, index, module);
+        blockTypeStack.addFirst(new BlockType(blockType));
+        block = readExpr(bytes, index, module, locals);
         block.type = blockType;
         int ifIndex = blocks.size();
         blocks.add(block);
@@ -530,7 +530,7 @@ public class Parser {
         int elseIndex = -1;
         
         if (bytes[index - 1] == 0x05) {
-          block = readExpr(bytes, index, module);
+          block = readExpr(bytes, index, module, locals);
           block.type = blockType;
           elseIndex = blocks.size();
           blocks.add(block);
@@ -544,10 +544,10 @@ public class Parser {
         newInput[blockType.inputs.length] = WasmType.i32;
         newType = new FunctionType(newInput, blockType.outputs);
 
-        if (elseIndex != -1) {
-          instructions.add(new Instruction(new InstructionType(expr::enterBlockIfElse, newType, new WasmType[] {WasmType.i32, WasmType.i32}, true), Arrays.asList(new ValueI32(ifIndex), new ValueI32(elseIndex))));
-        } else {
+        if (elseIndex == -1) {
           instructions.add(new Instruction(new InstructionType(expr::enterBlockIf, newType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new ValueI32(ifIndex))));
+        } else {
+          instructions.add(new Instruction(new InstructionType(expr::enterBlockIfElse, newType, new WasmType[] {WasmType.i32, WasmType.i32}, true), Arrays.asList(new ValueI32(ifIndex), new ValueI32(elseIndex))));
         }
         break;
 
@@ -556,7 +556,7 @@ public class Parser {
         index += offset;
 
         newType = new FunctionType();
-        outputs = blockTypeStack.get(branchDepth).outputs;
+        outputs = blockTypeStack.get(branchDepth).getResultType();
         newType.inputs = new WasmType[outputs.length];
         System.arraycopy(outputs, 0, newType.inputs, 0, newType.inputs.length);
 
@@ -567,7 +567,7 @@ public class Parser {
         branchDepth = readInt(bytes, index);
         index += offset;
         newType = new FunctionType();
-        outputs = blockTypeStack.get(branchDepth).outputs;
+        outputs = blockTypeStack.get(branchDepth).getResultType();
         newType.inputs = new WasmType[outputs.length + 1];
         System.arraycopy(outputs, 0, newType.inputs, 0, newType.inputs.length - 1);
         newType.inputs[newType.inputs.length - 1] = WasmType.i32;
@@ -590,9 +590,9 @@ public class Parser {
           index += offset;
         }
 
-        FunctionType defaultType = blockTypeStack.get(labelIndexes[labelIndexAmt - 1]);
-        newType = new FunctionType(new WasmType[defaultType.outputs.length + 1], new WasmType[0]);
-        System.arraycopy(defaultType.outputs, 0, newType.inputs, 0, newType.inputs.length - 1);
+        WasmType[] resultType = blockTypeStack.get(labelIndexes[labelIndexAmt - 1]).getResultType();
+        newType = new FunctionType(new WasmType[resultType.length + 1], new WasmType[0]);
+        System.arraycopy(resultType, 0, newType.inputs, 0, newType.inputs.length - 1);
         newType.inputs[newType.inputs.length - 1] = WasmType.i32;
 
         instructions.add(new Instruction(new InstructionType(Opcodes::branchTable, newType, new WasmType[] {}), Arrays.stream(labelIndexes).map(ValueI32::fromInt).collect(Collectors.toList())));
@@ -600,7 +600,7 @@ public class Parser {
 
         case 0x0F:
         newType = new FunctionType();
-        outputs = blockTypeStack.getLast().outputs;
+        outputs = blockTypeStack.getLast().getResultType();
         newType.inputs = new WasmType[outputs.length];
         System.arraycopy(outputs, 0, newType.inputs, 0, newType.inputs.length);
 
