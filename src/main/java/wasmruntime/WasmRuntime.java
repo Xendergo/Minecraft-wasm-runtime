@@ -9,12 +9,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.lib.gson.JsonReader;
+import wasmruntime.Commands.Invoke;
+import wasmruntime.Commands.Suggestions.ExportedFunctions;
+import wasmruntime.Commands.Suggestions.LoadedModules;
 import wasmruntime.Errors.WasmParseError;
 import wasmruntime.Errors.WasmValidationError;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.WorldSavePath;
+
+import static net.minecraft.server.command.CommandManager.*;
+import static com.mojang.brigadier.arguments.StringArgumentType.*;
 
 public class WasmRuntime implements ModInitializer {
 	@Override
@@ -74,6 +81,21 @@ public class WasmRuntime implements ModInitializer {
 					System.out.println("Couldn't create wasm.json file");
 				}
 			}
+		});
+
+		CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) -> {
+			dispatcher.register(literal("wasm")
+																				.then(literal("invoke")
+																					.then(argument("Module", string()).suggests(new LoadedModules())
+																						.then(argument("Function", string()).suggests(new ExportedFunctions())
+																							.executes(ctx -> Invoke.run(ctx, getString(ctx, "Module"), getString(ctx, "Function"), ""))
+																							.then(argument("Arguments", greedyString())
+																								.executes(ctx -> Invoke.run(ctx, getString(ctx, "Module"), getString(ctx, "Function"), getString(ctx, "Arguments")))
+																							)
+																						)
+																					)
+																				)
+																			);
 		});
 	}
 }

@@ -1,0 +1,6 @@
+{
+  "wasm.commands.error.no_such_module": "The module \"%s\" isn't loaded",
+  "wasm.commands.error.no_such_function": "The function \"%s\" doesn't exist or isn't exported",
+  "wasm.commands.error.incorrect_arg_amt": "This function expects %d arguments",
+  "wasm.commands.error.incorrect_argument": "Can't parse \"%s\" to a %s"
+}

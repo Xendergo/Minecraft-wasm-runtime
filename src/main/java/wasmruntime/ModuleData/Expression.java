@@ -125,7 +125,7 @@ public class Expression {
         if (typeStack.pollFirst() != type.outputs[i]) return false; // Output is wrong
       }
 
-      stackSize += 3; // Solves an edge case where the stack size is largest before the first operation is executed
+      stackSize = Math.max(stackSize, type.inputs.length);
     } catch (Exception e) {
       e.printStackTrace();
       return false;

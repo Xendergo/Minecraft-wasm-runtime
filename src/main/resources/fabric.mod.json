@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "modid",
+  "id": "wasmruntime",
   "version": "${version}",
 
   "name": "Fabric wasm runtime",

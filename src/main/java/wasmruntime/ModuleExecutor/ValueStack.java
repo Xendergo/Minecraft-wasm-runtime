@@ -1,5 +1,7 @@
 package wasmruntime.ModuleExecutor;
 
+import org.apache.commons.lang3.StringUtils;
+
 import wasmruntime.ModuleData.Module;
 
 public class ValueStack {
@@ -20,5 +22,10 @@ public class ValueStack {
   public Value pop() {
     stackPtr--;
     return stack[stackPtr];
+  }
+
+  @Override
+  public String toString() {
+    return "ValueStack [" + StringUtils.join(stack, ", ") + "]";
   }
 }

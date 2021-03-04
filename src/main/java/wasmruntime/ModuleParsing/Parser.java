@@ -33,6 +33,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import wasmruntime.Errors.Trap;
 import wasmruntime.Errors.WasmParseError;
 
 public class Parser {
@@ -195,7 +196,13 @@ public class Parser {
           if (!expr.IsValid(true, module.Globals.toArray(new Global[0]))) {
             throw new WasmParseError("Invalid global initializer with global index " + i);
           }
-          Value ret = ExecExpression.Exec(expr, module).stack[0];
+
+          Value ret;
+          try {
+            ret = ExecExpression.Exec(expr, module).stack[0];
+          } catch (Trap trap) {
+            throw new WasmParseError("Initialization of global value trapped: " + trap.getMessage());
+          }
 
           switch (type) {
             case i32:
@@ -285,7 +292,12 @@ public class Parser {
             throw new WasmParseError("Constant expression for offset of values in table "+tableIndex+" is invalid");
           }
 
-          int tableOffset = ((ValueI32)ExecExpression.Exec(expr, module).stack[0]).value;
+          int tableOffset;
+          try {
+            tableOffset = ((ValueI32)ExecExpression.Exec(expr, module).stack[0]).value;
+          } catch (Trap trap) {
+            throw new WasmParseError("Initialization of table offset trapped: " + trap.getMessage());
+          }
 
           int vecAmt = readInt(bytes, index);
           index += offset;
@@ -353,7 +365,12 @@ public class Parser {
             throw new WasmParseError("Constant expression for offset of data index " + i + "is invalid");
           }
 
-          int memoryOffset = ((ValueI32)ExecExpression.Exec(expr, module).stack[0]).value;
+          int memoryOffset;
+          try {
+            memoryOffset = ((ValueI32)ExecExpression.Exec(expr, module).stack[0]).value;
+          } catch (Trap trap) {
+            throw new WasmParseError("Initialization of offset in data section trapped: " + trap.getMessage());
+          }
 
           int byteAmt = readInt(bytes, index);
           index += offset;
