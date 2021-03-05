@@ -13,7 +13,9 @@ import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.lib.gson.JsonReader;
 import wasmruntime.Commands.Invoke;
+import wasmruntime.Commands.Load;
 import wasmruntime.Commands.Suggestions.ExportedFunctions;
+import wasmruntime.Commands.Suggestions.LoadableModules;
 import wasmruntime.Commands.Suggestions.LoadedModules;
 import wasmruntime.Errors.WasmParseError;
 import wasmruntime.Errors.WasmValidationError;
@@ -24,13 +26,17 @@ import static net.minecraft.server.command.CommandManager.*;
 import static com.mojang.brigadier.arguments.StringArgumentType.*;
 
 public class WasmRuntime implements ModInitializer {
+	public static File configFolder;
 	@Override
 	public void onInitialize() {
 		// This code runs as soon as Minecraft is in a mod-load-ready state.
 		// However, some things (like resources) may still be uninitialized.
 		// Proceed with mild caution.
 
+		
 		ServerLifecycleEvents.SERVER_STARTED.register((MinecraftServer server) -> {
+			configFolder = new File(server.getRunDirectory(), "config/wasm");
+
 			File file = new File(server.getSavePath(WorldSavePath.ROOT).toFile(), "wasm.json");
 
 			if (file.exists()) {
@@ -51,8 +57,6 @@ public class WasmRuntime implements ModInitializer {
 					} catch (Exception e) {
 						System.out.println("Error reading wasm.json file");
 					}
-
-					File configFolder = new File(server.getRunDirectory(), "config/wasm");
 
 					for (String modulePath : modulesPaths) {
 						try {
@@ -93,6 +97,14 @@ public class WasmRuntime implements ModInitializer {
 																								.executes(ctx -> Invoke.run(ctx, getString(ctx, "Module"), getString(ctx, "Function"), getString(ctx, "Arguments")))
 																							)
 																						)
+																					)
+																				).then(literal("load")
+																					.then(argument("Module", string()).suggests(new LoadableModules())
+																						.executes(ctx -> Load.run(ctx, getString(ctx, "Module")))
+																					)
+																				).then(literal("reload")
+																					.then(argument("Module", string()).suggests(new LoadedModules())
+																						.executes(ctx -> Load.run(ctx, getString(ctx, "Module")))
 																					)
 																				)
 																			);

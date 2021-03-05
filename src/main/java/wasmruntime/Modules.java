@@ -25,7 +25,5 @@ public class Modules {
     module.IsValid();
 
     modules.put(name, module);
-
-    System.out.println(modules.get(name));
   }
 }
