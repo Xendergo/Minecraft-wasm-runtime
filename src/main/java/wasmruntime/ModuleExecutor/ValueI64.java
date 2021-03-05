@@ -8,6 +8,6 @@ public class ValueI64 implements Value {
   }
 
   public String toString() {
-    return "Value: " + value;
+    return "i64: " + value;
   }
 }

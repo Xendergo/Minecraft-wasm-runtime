@@ -8,6 +8,6 @@ public class ValueF32 implements Value {
   }
 
   public String toString() {
-    return "Value: " + value;
+    return "f32: " + value;
   }
 }

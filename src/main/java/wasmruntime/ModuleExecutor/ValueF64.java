@@ -8,6 +8,6 @@ public class ValueF64 implements Value {
   }
 
   public String toString() {
-    return "Value: " + value;
+    return "f64: " + value;
   }
 }

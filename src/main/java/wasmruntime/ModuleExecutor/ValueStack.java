@@ -1,5 +1,6 @@
 package wasmruntime.ModuleExecutor;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import wasmruntime.ModuleData.Module;
@@ -24,8 +25,20 @@ public class ValueStack {
     return stack[stackPtr];
   }
 
+  public Value peek() {
+    return stack[stackPtr - 1];
+  }
+
+  public Value[] toArray() {
+    return ArrayUtils.subarray(stack, 0, stackPtr);
+  }
+
   @Override
   public String toString() {
-    return "ValueStack [" + StringUtils.join(stack, ", ") + "]";
+    return "ValueStack [" + StringUtils.join(toArray(), ", ") + "]";
+  }
+
+  public String displayString() {
+    return StringUtils.join(toArray(), ", ");
   }
 }

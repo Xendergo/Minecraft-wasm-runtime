@@ -8,7 +8,7 @@ public class ValueI32 implements Value {
   }
 
   public String toString() {
-    return "Value: " + value;
+    return "i32: " + value;
   }
 
   public static ValueI32 fromInt(int i) {

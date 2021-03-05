@@ -19,6 +19,7 @@ import wasmruntime.ModuleExecutor.ValueF64;
 import wasmruntime.ModuleExecutor.ValueI32;
 import wasmruntime.ModuleExecutor.ValueI64;
 import wasmruntime.ModuleExecutor.ValueStack;
+import wasmruntime.Utils.Message;
 
 public class Invoke {
   public static int run(CommandContext<ServerCommandSource> ctx, String moduleName, String functionName, String arguments) throws CommandSyntaxException {
@@ -61,12 +62,12 @@ public class Invoke {
     }
 
     try {
-		  func.Exec(stack);
+		  stack = func.Exec(stack);
     } catch (Trap e) {
       throw new SimpleCommandExceptionType(new LiteralText(e.getMessage())).create();
     }
 
-    System.out.println(stack);
+    Message.broadcast(new TranslatableText("wasm.commands.invoke.return", stack.displayString()), ctx.getSource().getMinecraftServer());
 
     return Command.SINGLE_SUCCESS;
   }

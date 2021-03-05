@@ -10,6 +10,7 @@ import wasmruntime.ModuleData.HelpfulEnums.GenericTypeRequirers;
 import wasmruntime.ModuleData.HelpfulEnums.WasmType;
 import wasmruntime.ModuleExecutor.Instruction;
 import wasmruntime.ModuleExecutor.InstructionType;
+import wasmruntime.ModuleExecutor.Value;
 import wasmruntime.ModuleExecutor.ValueI32;
 import wasmruntime.ModuleExecutor.ValueStack;
 
@@ -20,7 +21,8 @@ public class Expression {
   public boolean isBlock = false;
   public boolean isLoop = false;
 
-  public WasmType[] locals;
+  public WasmType[] localTypes;
+  public Value[] locals;
 
   public List<Expression> Blocks = new ArrayList<Expression>();
 
@@ -30,11 +32,11 @@ public class Expression {
     isBlock = false;
   }
 
-  public Expression(Instruction[] bytecodeOof, List<Expression> BlocksOof, WasmType[] localsOof) {
+  public Expression(Instruction[] bytecodeOof, List<Expression> BlocksOof, WasmType[] locals) {
     bytecode = bytecodeOof;
     Blocks = BlocksOof;
     isBlock = true;
-    locals = localsOof;
+    localTypes = locals;
   }
 
   public boolean IsValid(boolean isConstant, Global<?>[] globals) {
@@ -48,9 +50,9 @@ public class Expression {
           typeStack.add(input);
         }
 
-        thisLocals = locals;
+        thisLocals = localTypes;
       } else {
-        thisLocals = ArrayUtils.addAll(type.inputs, locals);
+        thisLocals = ArrayUtils.addAll(type.inputs, localTypes);
       }
 
       for (int i = 0; i < bytecode.length; i++) {
@@ -66,11 +68,11 @@ public class Expression {
 
           switch (op.genericTypeUse) {
             case local:
-            genericType = thisLocals[((ValueI32)instr.immediates.get(0)).value];
+            genericType = thisLocals[((ValueI32)instr.immediates[0]).value];
             break;
 
             case global:
-            genericType = globals[((ValueI32)instr.immediates.get(0)).value].type;
+            genericType = globals[((ValueI32)instr.immediates[0]).value].type;
             break;
 
             case select:
@@ -98,9 +100,9 @@ public class Expression {
         }
         
         if (op.invokesBlock) {
-          Expression block = Blocks.get(((ValueI32)instr.immediates.get(0)).value);
+          Expression block = Blocks.get(((ValueI32)instr.immediates[0]).value);
           block.isBlock = true;
-          block.locals = thisLocals;
+          block.localTypes = thisLocals;
           if (!block.IsValid(isConstant, globals)) return false;
         }
 
@@ -132,6 +134,18 @@ public class Expression {
     }
 
     return true;
+  }
+
+  public void localGet(ValueStack stack) {
+    stack.push(locals[Opcodes.i32(Opcodes.immediates[0])]);
+  }
+
+  public void localSet(ValueStack stack) {
+    locals[Opcodes.i32(Opcodes.immediates[0])] = stack.pop();
+  }
+
+  public void localTee(ValueStack stack) {
+    locals[Opcodes.i32(Opcodes.immediates[0])] = stack.peek();
   }
 
   /*

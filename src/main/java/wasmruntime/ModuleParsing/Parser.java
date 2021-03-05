@@ -16,6 +16,7 @@ import wasmruntime.ModuleData.Table;
 import wasmruntime.ModuleData.WasmFunction;
 import wasmruntime.ModuleData.HelpfulEnums.ElementType;
 import wasmruntime.ModuleData.HelpfulEnums.ExportTypes;
+import wasmruntime.ModuleData.HelpfulEnums.GenericTypeRequirers;
 import wasmruntime.ModuleData.HelpfulEnums.WasmType;
 import wasmruntime.ModuleExecutor.ExecExpression;
 import wasmruntime.ModuleExecutor.Instruction;
@@ -25,13 +26,14 @@ import wasmruntime.ModuleExecutor.ValueF32;
 import wasmruntime.ModuleExecutor.ValueF64;
 import wasmruntime.ModuleExecutor.ValueI32;
 import wasmruntime.ModuleExecutor.ValueI64;
+import wasmruntime.Operations.ControlFlow;
+import wasmruntime.Operations.Functions;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import wasmruntime.Errors.Trap;
 import wasmruntime.Errors.WasmParseError;
@@ -199,7 +201,7 @@ public class Parser {
 
           Value ret;
           try {
-            ret = ExecExpression.Exec(expr, module).stack[0];
+            ret = ExecExpression.Exec(expr, module, new Value[0]).stack[0];
           } catch (Trap trap) {
             throw new WasmParseError("Initialization of global value trapped: " + trap.getMessage());
           }
@@ -294,7 +296,7 @@ public class Parser {
 
           int tableOffset;
           try {
-            tableOffset = ((ValueI32)ExecExpression.Exec(expr, module).stack[0]).value;
+            tableOffset = ((ValueI32)ExecExpression.Exec(expr, module, new Value[0]).stack[0]).value;
           } catch (Trap trap) {
             throw new WasmParseError("Initialization of table offset trapped: " + trap.getMessage());
           }
@@ -367,7 +369,7 @@ public class Parser {
 
           int memoryOffset;
           try {
-            memoryOffset = ((ValueI32)ExecExpression.Exec(expr, module).stack[0]).value;
+            memoryOffset = ((ValueI32)ExecExpression.Exec(expr, module, new Value[0]).stack[0]).value;
           } catch (Trap trap) {
             throw new WasmParseError("Initialization of offset in data section trapped: " + trap.getMessage());
           }
@@ -497,7 +499,7 @@ public class Parser {
     List<Expression> blocks = new LinkedList<Expression>();
 
     Expression expr = new Expression(new Instruction[0], blocks);
-    expr.locals = locals;
+    expr.localTypes = locals;
 
     int originalStart = index;
 
@@ -507,6 +509,7 @@ public class Parser {
       int branchDepth;
       FunctionType newType;
       WasmType[] outputs;
+      int v;
       index++;
       switch (bytes[index - 1]) {
         case 0x02:
@@ -518,7 +521,7 @@ public class Parser {
         block.type = blockType;
         blocks.add(block);
         index += offset;
-        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new ValueI32(blocks.size() - 1))));
+        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), new Value[] {new ValueI32(blocks.size() - 1)}));
         break;
 
         case 0x03:
@@ -530,7 +533,7 @@ public class Parser {
         block.type = blockType;
         block.isLoop = true;
         index += offset;
-        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new ValueI32(blocks.size()))));
+        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), new Value[] {new ValueI32(blocks.size())}));
         blocks.add(block);
         break;
 
@@ -562,9 +565,9 @@ public class Parser {
         newType = new FunctionType(newInput, blockType.outputs);
 
         if (elseIndex == -1) {
-          instructions.add(new Instruction(new InstructionType(expr::enterBlockIf, newType, new WasmType[] {WasmType.i32}, true), Arrays.asList(new ValueI32(ifIndex))));
+          instructions.add(new Instruction(new InstructionType(expr::enterBlockIf, newType, new WasmType[] {WasmType.i32}, true), new Value[] {new ValueI32(ifIndex)}));
         } else {
-          instructions.add(new Instruction(new InstructionType(expr::enterBlockIfElse, newType, new WasmType[] {WasmType.i32, WasmType.i32}, true), Arrays.asList(new ValueI32(ifIndex), new ValueI32(elseIndex))));
+          instructions.add(new Instruction(new InstructionType(expr::enterBlockIfElse, newType, new WasmType[] {WasmType.i32, WasmType.i32}, true), new Value[] {new ValueI32(ifIndex), new ValueI32(elseIndex)}));
         }
         break;
 
@@ -577,7 +580,7 @@ public class Parser {
         newType.inputs = new WasmType[outputs.length];
         System.arraycopy(outputs, 0, newType.inputs, 0, newType.inputs.length);
 
-        instructions.add(new Instruction(new InstructionType(Opcodes::branch, newType, new WasmType[] {WasmType.i32}), Arrays.asList(new ValueI32(branchDepth))));
+        instructions.add(new Instruction(new InstructionType(ControlFlow::branch, newType, new WasmType[] {WasmType.i32}), new Value[] {new ValueI32(branchDepth)}));
         break;
 
         case 0x0D:
@@ -591,7 +594,7 @@ public class Parser {
 
         newType.outputs = outputs;
 
-        instructions.add(new Instruction(new InstructionType(Opcodes::branchIf, newType, new WasmType[] {WasmType.i32}), Arrays.asList(new ValueI32(branchDepth))));
+        instructions.add(new Instruction(new InstructionType(ControlFlow::branchIf, newType, new WasmType[] {WasmType.i32}), new Value[] {new ValueI32(branchDepth)}));
         break;
 
         case 0x0E:
@@ -612,7 +615,7 @@ public class Parser {
         System.arraycopy(resultType, 0, newType.inputs, 0, newType.inputs.length - 1);
         newType.inputs[newType.inputs.length - 1] = WasmType.i32;
 
-        instructions.add(new Instruction(new InstructionType(Opcodes::branchTable, newType, new WasmType[] {}), Arrays.stream(labelIndexes).map(ValueI32::fromInt).collect(Collectors.toList())));
+        instructions.add(new Instruction(new InstructionType(ControlFlow::branchTable, newType, new WasmType[] {}), Arrays.stream(labelIndexes).map(ValueI32::fromInt).toArray(Value[]::new)));
         break;
 
         case 0x0F:
@@ -621,7 +624,7 @@ public class Parser {
         newType.inputs = new WasmType[outputs.length];
         System.arraycopy(outputs, 0, newType.inputs, 0, newType.inputs.length);
 
-        instructions.add(new Instruction(new InstructionType(Opcodes::branch, newType, new WasmType[] {WasmType.i32}), Arrays.asList(new ValueI32(blockTypeStack.size() - 1))));
+        instructions.add(new Instruction(new InstructionType(ControlFlow::branch, newType, new WasmType[] {WasmType.i32}), new Value[] {new ValueI32(blockTypeStack.size() - 1)}));
         break;
 
         case 0x10:
@@ -630,7 +633,7 @@ public class Parser {
 
         if (module.Functions.size() <= funcIndex) throw new WasmParseError("There's no function at position " + funcIndex);
 
-        instructions.add(new Instruction(new InstructionType(Opcodes::call, module.Functions.get(funcIndex).type, new WasmType[] {WasmType.i32}), Arrays.asList(new ValueI32(funcIndex))));
+        instructions.add(new Instruction(new InstructionType(Functions::call, module.Functions.get(funcIndex).type, new WasmType[] {WasmType.i32}), new Value[] {new ValueI32(funcIndex)}));
         break;
 
         case 0x11:
@@ -645,7 +648,28 @@ public class Parser {
         System.arraycopy(oldType.inputs, 0, newType.inputs, 0, oldType.inputs.length);
         newType.inputs[newType.inputs.length - 1] = WasmType.i32;
 
-        instructions.add(new Instruction(new InstructionType(Opcodes::callIndirect, newType, new WasmType[] {WasmType.i32}), Arrays.asList(new ValueI32(typeIndex))));
+        instructions.add(new Instruction(new InstructionType(Functions::callIndirect, newType, new WasmType[] {WasmType.i32}), new Value[] {new ValueI32(typeIndex)}));
+        break;
+
+        case 0x20:
+        v = readInt(bytes, index);
+        index += offset;
+
+        instructions.add(new Instruction(new InstructionType(expr::localGet, Opcodes.get, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local), new Value[] {new ValueI32(v)}));
+        break;
+
+        case 0x21:
+        v = readInt(bytes, index);
+        index += offset;
+
+        instructions.add(new Instruction(new InstructionType(expr::localSet, Opcodes.get, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local), new Value[] {new ValueI32(v)}));
+        break;
+
+        case 0x22:
+        v = readInt(bytes, index);
+        index += offset;
+        
+        instructions.add(new Instruction(new InstructionType(expr::localTee, Opcodes.get, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local), new Value[] {new ValueI32(v)}));
         break;
 
         default:
@@ -658,28 +682,28 @@ public class Parser {
           type = Opcodes.opcodeMap.get(bytes[index - 1]);
         }
 
-        List<Value> immediates = new ArrayList<Value>();
+        Value[] immediates = new Value[type.immediates.length];
 
-        for (WasmType wasmType : type.immediates) {
-          switch (wasmType) {
+        for (int i = 0; i < immediates.length; i++) {
+          switch (type.immediates[i]) {
             case i32:
-            immediates.add(new ValueI32(readInt(bytes, index)));
+            immediates[i] = new ValueI32(readInt(bytes, index));
             break;
 
             case i64:
-            immediates.add(new ValueI64(readLong(bytes, index)));
+            immediates[i] = new ValueI64(readLong(bytes, index));
             break;
 
             case f32:
-            immediates.add(new ValueF32(readFloat(bytes, index)));
+            immediates[i] = new ValueF32(readFloat(bytes, index));
             break;
 
             case f64:
-            immediates.add(new ValueF64(readDouble(bytes, index)));
+            immediates[i] = new ValueF64(readDouble(bytes, index));
             break;
 
             default:
-            throw new WasmParseError("Can't use type " + wasmType + "as an immediate");
+            throw new WasmParseError("Can't use type " + type.immediates[i] + "as an immediate");
           }
 
           index += offset;

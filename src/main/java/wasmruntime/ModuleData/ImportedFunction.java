@@ -24,8 +24,8 @@ public class ImportedFunction extends WasmFunctionInterface {
   TODO: This
   */
   @Override
-  public void Exec(ValueStack stack) {
-    
+  public ValueStack Exec(ValueStack stack) {
+    return new ValueStack(0, new Module());
   }
 
   @Override

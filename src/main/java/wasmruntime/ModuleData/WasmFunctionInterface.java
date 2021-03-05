@@ -6,5 +6,5 @@ import wasmruntime.ModuleExecutor.ValueStack;
 public abstract class WasmFunctionInterface {
   public FunctionType type;
   public abstract int getStackSize();
-  public abstract void Exec(ValueStack stack) throws Trap;
+  public abstract ValueStack Exec(ValueStack stack) throws Trap;
 }

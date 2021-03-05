@@ -13,8 +13,8 @@ public class WasmFunction extends WasmFunctionInterface {
   }
 
   @Override
-  public void Exec(ValueStack stack) throws Trap {
-    ExecExpression.Exec(code.expr, stack.module);
+  public ValueStack Exec(ValueStack stack) throws Trap {
+    return ExecExpression.Exec(code.expr, stack.module, stack.toArray());
   }
 
   @Override

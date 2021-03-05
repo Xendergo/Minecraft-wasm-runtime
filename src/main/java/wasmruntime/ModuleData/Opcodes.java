@@ -2,11 +2,8 @@ package wasmruntime.ModuleData;
 
 import java.util.HashMap;
 
-import wasmruntime.Errors.Trap;
-import wasmruntime.Errors.TrapRuntime;
 import wasmruntime.ModuleData.HelpfulEnums.GenericTypeRequirers;
 import wasmruntime.ModuleData.HelpfulEnums.WasmType;
-import wasmruntime.ModuleExecutor.ExecExpression;
 import wasmruntime.ModuleExecutor.InstructionType;
 import wasmruntime.ModuleExecutor.Value;
 import wasmruntime.ModuleExecutor.ValueI32;
@@ -14,15 +11,18 @@ import wasmruntime.ModuleExecutor.ValueF32;
 import wasmruntime.ModuleExecutor.ValueI64;
 import wasmruntime.ModuleExecutor.ValueF64;
 import wasmruntime.ModuleExecutor.ValueStack;
+import wasmruntime.Operations.Const;
+import wasmruntime.Operations.Multiply;
+import wasmruntime.Operations.Remainder;
 
 public class Opcodes {
   public static Value[] immediates;
   
   static FunctionType nop = new FunctionType();
   static FunctionType drop = new FunctionType(new WasmType[] {WasmType.any}, new WasmType[0]);
-  static FunctionType get = new FunctionType(WasmType.T);
-  static FunctionType set = new FunctionType(new WasmType[] {WasmType.T}, new WasmType[0]);
-  static FunctionType tee = new FunctionType(new WasmType[] {WasmType.T}, new WasmType[] {WasmType.T});
+  public static FunctionType get = new FunctionType(WasmType.T);
+  public static FunctionType set = new FunctionType(new WasmType[] {WasmType.T}, new WasmType[0]);
+  public static FunctionType tee = new FunctionType(new WasmType[] {WasmType.T}, new WasmType[] {WasmType.T});
 
   static FunctionType i32Toi32 = new FunctionType(new WasmType[] {WasmType.i32}, new WasmType[] {WasmType.i32});
   static FunctionType i64Toi32 = new FunctionType(new WasmType[] {WasmType.i64}, new WasmType[] {WasmType.i32});
@@ -100,10 +100,10 @@ public class Opcodes {
     opcodeMap.put((byte) 0x3e, new InstructionType(Opcodes::temp, storei64, new WasmType[] {WasmType.i32, WasmType.i32}));
     opcodeMap.put((byte) 0x3f, new InstructionType(Opcodes::temp, consti32, new WasmType[0]));
     opcodeMap.put((byte) 0x40, new InstructionType(Opcodes::temp, i32Toi32, new WasmType[0]));
-    opcodeMap.put((byte) 0x41, new InstructionType(Opcodes::temp, consti32, new WasmType[] {WasmType.i32}));
-    opcodeMap.put((byte) 0x42, new InstructionType(Opcodes::temp, consti64, new WasmType[] {WasmType.i64}));
-    opcodeMap.put((byte) 0x43, new InstructionType(Opcodes::temp, constf32, new WasmType[] {WasmType.f32}));
-    opcodeMap.put((byte) 0x44, new InstructionType(Opcodes::temp, constf64, new WasmType[] {WasmType.f64}));
+    opcodeMap.put((byte) 0x41, new InstructionType(Const::ConstOperation, consti32, new WasmType[] {WasmType.i32}));
+    opcodeMap.put((byte) 0x42, new InstructionType(Const::ConstOperation, consti64, new WasmType[] {WasmType.i64}));
+    opcodeMap.put((byte) 0x43, new InstructionType(Const::ConstOperation, constf32, new WasmType[] {WasmType.f32}));
+    opcodeMap.put((byte) 0x44, new InstructionType(Const::ConstOperation, constf64, new WasmType[] {WasmType.f64}));
     opcodeMap.put((byte) 0x45, new InstructionType(Opcodes::temp, i32Toi32, new WasmType[0]));
     opcodeMap.put((byte) 0x46, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
     opcodeMap.put((byte) 0x47, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
@@ -143,11 +143,11 @@ public class Opcodes {
     opcodeMap.put((byte) 0x69, new InstructionType(Opcodes::temp, i32Toi32, new WasmType[0]));
     opcodeMap.put((byte) 0x6a, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
     opcodeMap.put((byte) 0x6b, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
-    opcodeMap.put((byte) 0x6c, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
+    opcodeMap.put((byte) 0x6c, new InstructionType(Multiply::I32, comparei32, new WasmType[0]));
     opcodeMap.put((byte) 0x6d, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
     opcodeMap.put((byte) 0x6e, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
-    opcodeMap.put((byte) 0x6f, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
-    opcodeMap.put((byte) 0x70, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
+    opcodeMap.put((byte) 0x6f, new InstructionType(Remainder::i32_s, comparei32, new WasmType[0]));
+    opcodeMap.put((byte) 0x70, new InstructionType(Remainder::i32_u, comparei32, new WasmType[0]));
     opcodeMap.put((byte) 0x71, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
     opcodeMap.put((byte) 0x72, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
     opcodeMap.put((byte) 0x73, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
@@ -161,11 +161,11 @@ public class Opcodes {
     opcodeMap.put((byte) 0x7b, new InstructionType(Opcodes::temp, i64Toi64, new WasmType[0]));
     opcodeMap.put((byte) 0x7c, new InstructionType(Opcodes::temp, operatori64, new WasmType[0]));
     opcodeMap.put((byte) 0x7d, new InstructionType(Opcodes::temp, operatori64, new WasmType[0]));
-    opcodeMap.put((byte) 0x7e, new InstructionType(Opcodes::temp, operatori64, new WasmType[0]));
+    opcodeMap.put((byte) 0x7e, new InstructionType(Multiply::I64, operatori64, new WasmType[0]));
     opcodeMap.put((byte) 0x7f, new InstructionType(Opcodes::temp, operatori64, new WasmType[0]));
     opcodeMap.put((byte) 0x80, new InstructionType(Opcodes::temp, operatori64, new WasmType[0]));
-    opcodeMap.put((byte) 0x81, new InstructionType(Opcodes::temp, operatori64, new WasmType[0]));
-    opcodeMap.put((byte) 0x82, new InstructionType(Opcodes::temp, operatori64, new WasmType[0]));
+    opcodeMap.put((byte) 0x81, new InstructionType(Remainder::i64_s, operatori64, new WasmType[0]));
+    opcodeMap.put((byte) 0x82, new InstructionType(Remainder::i64_u, operatori64, new WasmType[0]));
     opcodeMap.put((byte) 0x83, new InstructionType(Opcodes::temp, operatori64, new WasmType[0]));
     opcodeMap.put((byte) 0x84, new InstructionType(Opcodes::temp, operatori64, new WasmType[0]));
     opcodeMap.put((byte) 0x85, new InstructionType(Opcodes::temp, operatori64, new WasmType[0]));
@@ -183,7 +183,7 @@ public class Opcodes {
     opcodeMap.put((byte) 0x91, new InstructionType(Opcodes::temp, f32Tof32, new WasmType[0]));
     opcodeMap.put((byte) 0x92, new InstructionType(Opcodes::temp, operatorf32, new WasmType[0]));
     opcodeMap.put((byte) 0x93, new InstructionType(Opcodes::temp, operatorf32, new WasmType[0]));
-    opcodeMap.put((byte) 0x94, new InstructionType(Opcodes::temp, operatorf32, new WasmType[0]));
+    opcodeMap.put((byte) 0x94, new InstructionType(Multiply::F32, operatorf32, new WasmType[0]));
     opcodeMap.put((byte) 0x95, new InstructionType(Opcodes::temp, operatorf32, new WasmType[0]));
     opcodeMap.put((byte) 0x96, new InstructionType(Opcodes::temp, operatorf32, new WasmType[0]));
     opcodeMap.put((byte) 0x97, new InstructionType(Opcodes::temp, operatorf32, new WasmType[0]));
@@ -197,7 +197,7 @@ public class Opcodes {
     opcodeMap.put((byte) 0x9f, new InstructionType(Opcodes::temp, f64Tof64, new WasmType[0]));
     opcodeMap.put((byte) 0xa0, new InstructionType(Opcodes::temp, operatorf64, new WasmType[0]));
     opcodeMap.put((byte) 0xa1, new InstructionType(Opcodes::temp, operatorf64, new WasmType[0]));
-    opcodeMap.put((byte) 0xa2, new InstructionType(Opcodes::temp, operatorf64, new WasmType[0]));
+    opcodeMap.put((byte) 0xa2, new InstructionType(Multiply::F64, operatorf64, new WasmType[0]));
     opcodeMap.put((byte) 0xa3, new InstructionType(Opcodes::temp, operatorf64, new WasmType[0]));
     opcodeMap.put((byte) 0xa4, new InstructionType(Opcodes::temp, operatorf64, new WasmType[0]));
     opcodeMap.put((byte) 0xa5, new InstructionType(Opcodes::temp, operatorf64, new WasmType[0]));
@@ -259,44 +259,23 @@ public class Opcodes {
     return ((ValueF64)v).value;
   }
 
+  public static int i32(ValueStack v) {
+    return ((ValueI32)v.pop()).value;
+  }
+
+  public static float f32(ValueStack v) {
+    return ((ValueF32)v.pop()).value;
+  }
+
+  public static long i64(ValueStack v) {
+    return ((ValueI64)v.pop()).value;
+  }
+
+  public static double f64(ValueStack v) {
+    return ((ValueF64)(v.pop())).value;
+  }
+
   private static void temp(ValueStack stack) {
 
-  }
-
-  public static void branch(ValueStack stack) {
-    ExecExpression.branchDepth = i32(immediates[0]);
-  }
-
-  public static void branchIf(ValueStack stack) {
-    if (i32(stack.pop()) == 0) {
-      ExecExpression.branchDepth = i32(immediates[0]);
-    }
-  }
-
-  public static void branchTable(ValueStack stack) {
-    int index = i32(immediates[i32(stack.pop())]);
-    if (immediates.length <= index) {
-      ExecExpression.branchDepth = i32(immediates[immediates.length - 1]);
-    } else {
-      ExecExpression.branchDepth = i32(immediates[index]);
-    }
-  }
-
-  public static void call(ValueStack stack) {
-    try {
-      stack.module.Functions.get(i32(immediates[0])).Exec(stack);
-    } catch (Trap trap) {
-      throw new TrapRuntime(trap.getMessage());
-    }
-  }
-
-  public static void callIndirect(ValueStack stack) {
-    WasmFunctionInterface func = stack.module.Functions.get(stack.module.Tables.get(0).values.get(i32(stack.pop())));
-    if (!func.type.equals(stack.module.TypeSection.get(i32(immediates[0])))) throw new TrapRuntime("call_indirect tried to call a function with the wrong type, are you passing an incorrect callback?");
-    try {
-      func.Exec(stack);
-    } catch (Trap trap) {
-      throw new TrapRuntime(trap.getMessage());
-    }
   }
 }
