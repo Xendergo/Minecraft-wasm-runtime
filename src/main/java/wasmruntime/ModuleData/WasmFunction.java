@@ -2,6 +2,7 @@ package wasmruntime.ModuleData;
 
 import wasmruntime.Errors.Trap;
 import wasmruntime.ModuleExecutor.ExecExpression;
+import wasmruntime.ModuleExecutor.Value;
 import wasmruntime.ModuleExecutor.ValueStack;
 
 public class WasmFunction extends WasmFunctionInterface {
@@ -13,8 +14,8 @@ public class WasmFunction extends WasmFunctionInterface {
   }
 
   @Override
-  public ValueStack Exec(ValueStack stack) throws Trap {
-    return ExecExpression.Exec(code.expr, stack.module, stack.toArray());
+  public ValueStack Exec(Value[] stack, Module module) throws Trap {
+    return ExecExpression.Exec(code.expr, module, stack);
   }
 
   @Override

@@ -15,6 +15,12 @@ public class ValueStack {
     module = moduleOof;
   }
 
+  public void pushStack(ValueStack stackToPush) {
+    for (Value i : stackToPush.toArray()) {
+      push(i);
+    }
+  }
+
   public void push(Value v) {
     stack[stackPtr] = v;
     stackPtr++;
@@ -30,7 +36,9 @@ public class ValueStack {
   }
 
   public Value[] toArray() {
-    return ArrayUtils.subarray(stack, 0, stackPtr);
+    Value[] a = ArrayUtils.subarray(stack, 0, stackPtr);
+    ArrayUtils.reverse(a);
+    return a;
   }
 
   @Override

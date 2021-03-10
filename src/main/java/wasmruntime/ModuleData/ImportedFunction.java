@@ -1,5 +1,6 @@
 package wasmruntime.ModuleData;
 
+import wasmruntime.ModuleExecutor.Value;
 import wasmruntime.ModuleExecutor.ValueStack;
 
 public class ImportedFunction extends WasmFunctionInterface {
@@ -24,8 +25,8 @@ public class ImportedFunction extends WasmFunctionInterface {
   TODO: This
   */
   @Override
-  public ValueStack Exec(ValueStack stack) {
-    return new ValueStack(0, new Module());
+  public ValueStack Exec(Value[] values, Module module) {
+    return new ValueStack(0, module);
   }
 
   @Override

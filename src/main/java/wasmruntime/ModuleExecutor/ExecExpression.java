@@ -1,6 +1,7 @@
 package wasmruntime.ModuleExecutor;
 
 import wasmruntime.Errors.Trap;
+import wasmruntime.Errors.TrapRuntime;
 import wasmruntime.ModuleData.Expression;
 import wasmruntime.ModuleData.Module;
 import wasmruntime.ModuleData.Opcodes;
@@ -15,8 +16,12 @@ public class ExecExpression {
     expr.locals = locals;
 
     for (int i = 0; i < instructions.length; i++) {
-      Opcodes.immediates = instructions[i].immediates;
-      instructions[i].operation.operation.accept(stack);
+      try {
+        Opcodes.immediates = instructions[i].immediates;
+        instructions[i].operation.operation.accept(stack);
+      } catch (TrapRuntime trap) {
+        throw new Trap(trap.getMessage());
+      }
     }
     
     return stack;

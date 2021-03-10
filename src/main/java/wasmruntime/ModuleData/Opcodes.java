@@ -11,6 +11,7 @@ import wasmruntime.ModuleExecutor.ValueF32;
 import wasmruntime.ModuleExecutor.ValueI64;
 import wasmruntime.ModuleExecutor.ValueF64;
 import wasmruntime.ModuleExecutor.ValueStack;
+import wasmruntime.Operations.Add;
 import wasmruntime.Operations.Const;
 import wasmruntime.Operations.Multiply;
 import wasmruntime.Operations.Remainder;
@@ -141,7 +142,7 @@ public class Opcodes {
     opcodeMap.put((byte) 0x67, new InstructionType(Opcodes::temp, i32Toi32, new WasmType[0]));
     opcodeMap.put((byte) 0x68, new InstructionType(Opcodes::temp, i32Toi32, new WasmType[0]));
     opcodeMap.put((byte) 0x69, new InstructionType(Opcodes::temp, i32Toi32, new WasmType[0]));
-    opcodeMap.put((byte) 0x6a, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
+    opcodeMap.put((byte) 0x6a, new InstructionType(Add::I32, comparei32, new WasmType[0]));
     opcodeMap.put((byte) 0x6b, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
     opcodeMap.put((byte) 0x6c, new InstructionType(Multiply::I32, comparei32, new WasmType[0]));
     opcodeMap.put((byte) 0x6d, new InstructionType(Opcodes::temp, comparei32, new WasmType[0]));
@@ -159,7 +160,7 @@ public class Opcodes {
     opcodeMap.put((byte) 0x79, new InstructionType(Opcodes::temp, i64Toi64, new WasmType[0]));
     opcodeMap.put((byte) 0x7a, new InstructionType(Opcodes::temp, i64Toi64, new WasmType[0]));
     opcodeMap.put((byte) 0x7b, new InstructionType(Opcodes::temp, i64Toi64, new WasmType[0]));
-    opcodeMap.put((byte) 0x7c, new InstructionType(Opcodes::temp, operatori64, new WasmType[0]));
+    opcodeMap.put((byte) 0x7c, new InstructionType(Add::I64, operatori64, new WasmType[0]));
     opcodeMap.put((byte) 0x7d, new InstructionType(Opcodes::temp, operatori64, new WasmType[0]));
     opcodeMap.put((byte) 0x7e, new InstructionType(Multiply::I64, operatori64, new WasmType[0]));
     opcodeMap.put((byte) 0x7f, new InstructionType(Opcodes::temp, operatori64, new WasmType[0]));
@@ -181,7 +182,7 @@ public class Opcodes {
     opcodeMap.put((byte) 0x8f, new InstructionType(Opcodes::temp, f32Tof32, new WasmType[0]));
     opcodeMap.put((byte) 0x90, new InstructionType(Opcodes::temp, f32Tof32, new WasmType[0]));
     opcodeMap.put((byte) 0x91, new InstructionType(Opcodes::temp, f32Tof32, new WasmType[0]));
-    opcodeMap.put((byte) 0x92, new InstructionType(Opcodes::temp, operatorf32, new WasmType[0]));
+    opcodeMap.put((byte) 0x92, new InstructionType(Add::F32, operatorf32, new WasmType[0]));
     opcodeMap.put((byte) 0x93, new InstructionType(Opcodes::temp, operatorf32, new WasmType[0]));
     opcodeMap.put((byte) 0x94, new InstructionType(Multiply::F32, operatorf32, new WasmType[0]));
     opcodeMap.put((byte) 0x95, new InstructionType(Opcodes::temp, operatorf32, new WasmType[0]));
@@ -195,7 +196,7 @@ public class Opcodes {
     opcodeMap.put((byte) 0x9d, new InstructionType(Opcodes::temp, f64Tof64, new WasmType[0]));
     opcodeMap.put((byte) 0x9e, new InstructionType(Opcodes::temp, f64Tof64, new WasmType[0]));
     opcodeMap.put((byte) 0x9f, new InstructionType(Opcodes::temp, f64Tof64, new WasmType[0]));
-    opcodeMap.put((byte) 0xa0, new InstructionType(Opcodes::temp, operatorf64, new WasmType[0]));
+    opcodeMap.put((byte) 0xa0, new InstructionType(Add::F64, operatorf64, new WasmType[0]));
     opcodeMap.put((byte) 0xa1, new InstructionType(Opcodes::temp, operatorf64, new WasmType[0]));
     opcodeMap.put((byte) 0xa2, new InstructionType(Multiply::F64, operatorf64, new WasmType[0]));
     opcodeMap.put((byte) 0xa3, new InstructionType(Opcodes::temp, operatorf64, new WasmType[0]));

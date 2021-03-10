@@ -62,7 +62,7 @@ public class Invoke {
     }
 
     try {
-		  stack = func.Exec(stack);
+		  stack = func.Exec(stack.toArray(), module);
     } catch (Trap e) {
       throw new SimpleCommandExceptionType(new LiteralText(e.getMessage())).create();
     }
