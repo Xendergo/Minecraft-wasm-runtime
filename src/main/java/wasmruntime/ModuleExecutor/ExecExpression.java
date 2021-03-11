@@ -8,6 +8,7 @@ import wasmruntime.ModuleData.Opcodes;
 
 public class ExecExpression {
   public static int branchDepth = -1;
+  public static ValueStack branchOutput;
 
   public static ValueStack Exec(Expression expr, Module module, Value[] locals) throws Trap {
     return Exec(expr, module, locals, new ValueStack(expr.stackSize, module));
@@ -22,6 +23,16 @@ public class ExecExpression {
       try {
         Opcodes.immediates = instructions[i].immediates;
         instructions[i].operation.operation.accept(stack);
+        if (branchDepth != -1) {
+          if (branchDepth == 0) {
+            stack.pushStack(expr.type.popOutput(branchOutput));
+            branchOutput = null;
+          }
+
+          i = expr.isLoop && branchDepth == 0 ? 0 : instructions.length - 1;
+
+          branchDepth--;
+        }
       } catch (TrapRuntime trap) {
         throw new Trap(trap.getMessage());
       }

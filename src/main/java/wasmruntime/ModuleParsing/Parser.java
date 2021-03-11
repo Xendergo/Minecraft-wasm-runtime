@@ -521,7 +521,7 @@ public class Parser {
         block.type = blockType;
         blocks.add(block);
         index += offset;
-        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), new Value[] {new ValueI32(blocks.size() - 1)}));
+        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true, false), new Value[] {new ValueI32(blocks.size() - 1)}));
         break;
 
         case 0x03:
@@ -533,7 +533,7 @@ public class Parser {
         block.type = blockType;
         block.isLoop = true;
         index += offset;
-        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true), new Value[] {new ValueI32(blocks.size())}));
+        instructions.add(new Instruction(new InstructionType(expr::enterBlock, blockType, new WasmType[] {WasmType.i32}, true, false), new Value[] {new ValueI32(blocks.size())}));
         blocks.add(block);
         break;
 
@@ -565,9 +565,9 @@ public class Parser {
         newType = new FunctionType(newInput, blockType.outputs);
 
         if (elseIndex == -1) {
-          instructions.add(new Instruction(new InstructionType(expr::enterBlockIf, newType, new WasmType[] {WasmType.i32}, true), new Value[] {new ValueI32(ifIndex)}));
+          instructions.add(new Instruction(new InstructionType(expr::enterBlockIf, newType, new WasmType[] {WasmType.i32}, true, false), new Value[] {new ValueI32(ifIndex)}));
         } else {
-          instructions.add(new Instruction(new InstructionType(expr::enterBlockIfElse, newType, new WasmType[] {WasmType.i32, WasmType.i32}, true), new Value[] {new ValueI32(ifIndex), new ValueI32(elseIndex)}));
+          instructions.add(new Instruction(new InstructionType(expr::enterBlockIfElse, newType, new WasmType[] {WasmType.i32, WasmType.i32}, true, false), new Value[] {new ValueI32(ifIndex), new ValueI32(elseIndex)}));
         }
         break;
 
@@ -580,7 +580,7 @@ public class Parser {
         newType.inputs = new WasmType[outputs.length];
         System.arraycopy(outputs, 0, newType.inputs, 0, newType.inputs.length);
 
-        instructions.add(new Instruction(new InstructionType(ControlFlow::branch, newType, new WasmType[] {WasmType.i32}), new Value[] {new ValueI32(branchDepth)}));
+        instructions.add(new Instruction(new InstructionType(ControlFlow::branch, newType, new WasmType[] {WasmType.i32}, false, true), new Value[] {new ValueI32(branchDepth)}));
         break;
 
         case 0x0D:
@@ -604,10 +604,10 @@ public class Parser {
         int len = blockTypeStack.size();
         for (int i = 0; i < labelIndexAmt; i++) {
           labelIndexes[i] = readInt(bytes, index);
+          index += offset;
           if (labelIndexes[i] >= len) {
             throw new WasmParseError("Error parsing br_table instruction, there's no block with index " + labelIndexes[i]);
           }
-          index += offset;
         }
 
         WasmType[] resultType = blockTypeStack.get(labelIndexes[labelIndexAmt - 1]).getResultType();
@@ -615,7 +615,9 @@ public class Parser {
         System.arraycopy(resultType, 0, newType.inputs, 0, newType.inputs.length - 1);
         newType.inputs[newType.inputs.length - 1] = WasmType.i32;
 
-        instructions.add(new Instruction(new InstructionType(ControlFlow::branchTable, newType, new WasmType[] {}), Arrays.stream(labelIndexes).map(ValueI32::fromInt).toArray(Value[]::new)));
+        System.out.println(newType);
+
+        instructions.add(new Instruction(new InstructionType(ControlFlow::branchTable, newType, new WasmType[] {}, false, true), Arrays.stream(labelIndexes).map(ValueI32::fromInt).toArray(Value[]::new)));
         break;
 
         case 0x0F:
@@ -623,8 +625,9 @@ public class Parser {
         outputs = blockTypeStack.getLast().getResultType();
         newType.inputs = new WasmType[outputs.length];
         System.arraycopy(outputs, 0, newType.inputs, 0, newType.inputs.length);
+        newType.outputs = newType.inputs;
 
-        instructions.add(new Instruction(new InstructionType(ControlFlow::branch, newType, new WasmType[] {WasmType.i32}), new Value[] {new ValueI32(blockTypeStack.size() - 1)}));
+        instructions.add(new Instruction(new InstructionType(ControlFlow::branch, newType, new WasmType[] {WasmType.i32}, false, true), new Value[] {new ValueI32(blockTypeStack.size() - 1)}));
         break;
 
         case 0x10:

@@ -124,9 +124,13 @@ public class Expression {
         if (stackSize < typeStack.size()) {
           stackSize = typeStack.size();
         }
+
+        if (op.stopsExecution) {
+          break;
+        }
       }
 
-      if (type.outputs.length != typeStack.size()) return false; // Output is wrong
+      if (type.outputs.length != typeStack.size() && !isBlock) return false; // Output is wrong
 
       for (int i = 0; i < type.outputs.length; i++) {
         if (typeStack.pollFirst() != type.outputs[i]) return false; // Output is wrong
@@ -156,7 +160,11 @@ public class Expression {
   public void enterBlock(ValueStack stack, int blockIndex) {
     Expression block = Blocks.get(blockIndex);
     try {
-      stack.pushStack(ExecExpression.Exec(block, stack.module, locals, new ValueStack(block.stackSize, stack.module, block.type.popArgs(stack))));
+      ValueStack ret = ExecExpression.Exec(block, stack.module, locals, new ValueStack(block.stackSize, stack.module, block.type.popArgs(stack)));
+      
+      if (ExecExpression.branchDepth == -1) {
+        stack.pushStack(block.type.popOutput(ret));
+      }
     } catch (Trap trap) {
       throw new TrapRuntime(trap.getMessage());
     }

@@ -32,13 +32,23 @@ public class FunctionType {
   }
 
   public Value[] popArgs(ValueStack stack) {
-    Value[] locals = new Value[inputs.length];
+    Value[] args = new Value[inputs.length];
 
-    for (int i = 0; i < locals.length; i++) {
-      locals[i] = stack.pop();
+    for (int i = 0; i < args.length; i++) {
+      args[i] = stack.pop();
     }
 
-    return locals;
+    return args;
+  }
+
+  public Value[] popOutput(ValueStack stack) {
+    Value[] returnValues = new Value[outputs.length];
+
+    for (int i = 0; i < returnValues.length; i++) {
+      returnValues[i] = stack.pop();
+    }
+
+    return returnValues;
   }
 
   public String toString() {

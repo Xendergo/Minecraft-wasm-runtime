@@ -28,6 +28,12 @@ public class ValueStack {
     }
   }
 
+  public void pushStack(Value[] stackToPush) {
+    for (Value i : stackToPush) {
+      push(i);
+    }
+  }
+
   public void push(Value v) {
     stack[stackPtr] = v;
     stackPtr++;

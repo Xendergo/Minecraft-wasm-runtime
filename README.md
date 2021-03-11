@@ -10,7 +10,7 @@ Wasm runtime is a mod that executes webassembly modules within minecraft
 1. ✅The loop to execute instructions
 2. ✅Local variables
 3. ✅Entering blocks
-4. Branching
+4. ✅Branching
 5. Grinding out the logic for all the instructions
 ### Language support
 1. AssemblyScript

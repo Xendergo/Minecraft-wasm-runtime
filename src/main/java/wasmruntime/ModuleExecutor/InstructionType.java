@@ -12,6 +12,7 @@ public class InstructionType {
   public WasmType[] immediates;
   public GenericTypeRequirers genericTypeUse = GenericTypeRequirers.none;
   public boolean invokesBlock = false;
+  public boolean stopsExecution = false;
 
   public InstructionType(Consumer<ValueStack> operationOof, FunctionType typeOof, WasmType[] immediatesOof) {
     operation = operationOof;
@@ -26,11 +27,12 @@ public class InstructionType {
     genericTypeUse = genericTypeUseOof;
   }
 
-  public InstructionType(Consumer<ValueStack> operationOof, FunctionType typeOof, WasmType[] immediatesOof, boolean invokesBlockOof) {
+  public InstructionType(Consumer<ValueStack> operationOof, FunctionType typeOof, WasmType[] immediatesOof, boolean invokesBlockOof, boolean stopsExecutionOof) {
     operation = operationOof;
     type = typeOof;
     immediates = immediatesOof;
     invokesBlock = invokesBlockOof;
+    stopsExecution = stopsExecutionOof;
   }
 
   @Override
