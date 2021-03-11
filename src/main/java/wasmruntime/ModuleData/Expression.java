@@ -6,8 +6,11 @@ import java.util.List;
 
 import org.apache.commons.lang3.ArrayUtils;
 
+import wasmruntime.Errors.Trap;
+import wasmruntime.Errors.TrapRuntime;
 import wasmruntime.ModuleData.HelpfulEnums.GenericTypeRequirers;
 import wasmruntime.ModuleData.HelpfulEnums.WasmType;
+import wasmruntime.ModuleExecutor.ExecExpression;
 import wasmruntime.ModuleExecutor.Instruction;
 import wasmruntime.ModuleExecutor.InstructionType;
 import wasmruntime.ModuleExecutor.Value;
@@ -100,10 +103,12 @@ public class Expression {
         }
         
         if (op.invokesBlock) {
-          Expression block = Blocks.get(((ValueI32)instr.immediates[0]).value);
-          block.isBlock = true;
-          block.localTypes = thisLocals;
-          if (!block.IsValid(isConstant, globals)) return false;
+          for (Value immediate : instr.immediates) {
+            Expression block = Blocks.get(Opcodes.i32(immediate));
+            block.isBlock = true;
+            block.localTypes = thisLocals;
+            if (!block.IsValid(isConstant, globals)) return false;
+          }
         }
 
         for (int j = instrType.inputs.length - 1; j >= 0; j--) {
@@ -148,15 +153,17 @@ public class Expression {
     locals[Opcodes.i32(Opcodes.immediates[0])] = stack.peek();
   }
 
-  /*
-  TODO: this
-  */
-  public void enterBlock(ValueStack stack, int block) {
-    
+  public void enterBlock(ValueStack stack, int blockIndex) {
+    Expression block = Blocks.get(blockIndex);
+    try {
+      stack.pushStack(ExecExpression.Exec(block, stack.module, locals, new ValueStack(block.stackSize, stack.module, block.type.popArgs(stack))));
+    } catch (Trap trap) {
+      throw new TrapRuntime(trap.getMessage());
+    }
   }
 
   public void enterBlock(ValueStack stack) {
-    enterBlock(stack, ((ValueI32)Opcodes.immediates[0]).value);
+    enterBlock(stack, Opcodes.i32(Opcodes.immediates[0]));
   }
 
   public void enterBlockIf(ValueStack stack) {

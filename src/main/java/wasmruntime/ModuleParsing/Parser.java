@@ -662,14 +662,14 @@ public class Parser {
         v = readInt(bytes, index);
         index += offset;
 
-        instructions.add(new Instruction(new InstructionType(expr::localSet, Opcodes.get, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local), new Value[] {new ValueI32(v)}));
+        instructions.add(new Instruction(new InstructionType(expr::localSet, Opcodes.set, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local), new Value[] {new ValueI32(v)}));
         break;
 
         case 0x22:
         v = readInt(bytes, index);
         index += offset;
         
-        instructions.add(new Instruction(new InstructionType(expr::localTee, Opcodes.get, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local), new Value[] {new ValueI32(v)}));
+        instructions.add(new Instruction(new InstructionType(expr::localTee, Opcodes.tee, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local), new Value[] {new ValueI32(v)}));
         break;
 
         default:

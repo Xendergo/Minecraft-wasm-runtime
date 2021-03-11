@@ -1,6 +1,8 @@
 package wasmruntime.ModuleData;
 
 import wasmruntime.ModuleData.HelpfulEnums.WasmType;
+import wasmruntime.ModuleExecutor.Value;
+import wasmruntime.ModuleExecutor.ValueStack;
 
 public class FunctionType {
   public WasmType[] inputs;
@@ -27,6 +29,16 @@ public class FunctionType {
 
     System.arraycopy(type.inputs, 0, inputs, 0, type.inputs.length);
     System.arraycopy(type.outputs, 0, outputs, 0, type.outputs.length);
+  }
+
+  public Value[] popArgs(ValueStack stack) {
+    Value[] locals = new Value[inputs.length];
+
+    for (int i = 0; i < locals.length; i++) {
+      locals[i] = stack.pop();
+    }
+
+    return locals;
   }
 
   public String toString() {

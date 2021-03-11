@@ -15,6 +15,13 @@ public class ValueStack {
     module = moduleOof;
   }
 
+  public ValueStack(int size, Module moduleOof, Value[] initial) {
+    stack = new Value[size];
+    System.arraycopy(initial, 0, stack, 0, initial.length);
+    stackPtr = initial.length;
+    module = moduleOof;
+  }
+
   public void pushStack(ValueStack stackToPush) {
     for (Value i : stackToPush.toArray()) {
       push(i);

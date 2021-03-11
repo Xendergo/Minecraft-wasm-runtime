@@ -65,6 +65,8 @@ public class Invoke {
 		  stack = func.Exec(stack.toArray(), module);
     } catch (Trap e) {
       throw new SimpleCommandExceptionType(new LiteralText(e.getMessage())).create();
+    } catch (Exception e) {
+      e.printStackTrace();
     }
 
     Message.broadcast(new TranslatableText("wasm.commands.invoke.return", stack.displayString()), ctx.getSource().getMinecraftServer());
