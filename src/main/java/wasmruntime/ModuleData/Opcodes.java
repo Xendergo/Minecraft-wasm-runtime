@@ -12,6 +12,7 @@ import wasmruntime.ModuleExecutor.ValueI64;
 import wasmruntime.ModuleExecutor.ValueF64;
 import wasmruntime.ModuleExecutor.ValueStack;
 import wasmruntime.Operations.Add;
+import wasmruntime.Operations.Basic;
 import wasmruntime.Operations.Const;
 import wasmruntime.Operations.Multiply;
 import wasmruntime.Operations.Remainder;
@@ -62,15 +63,24 @@ public class Opcodes {
   static FunctionType operatorf64 = new FunctionType(new WasmType[] {WasmType.f64, WasmType.f64}, new WasmType[] {WasmType.f64});
 
   static FunctionType select = new FunctionType(new WasmType[] {WasmType.T, WasmType.T, WasmType.i32}, new WasmType[] {WasmType.T});
+  static FunctionType selecti32 = new FunctionType(new WasmType[] {WasmType.i32, WasmType.i32, WasmType.i32}, new WasmType[] {WasmType.i32});
+  static FunctionType selecti64 = new FunctionType(new WasmType[] {WasmType.i64, WasmType.i64, WasmType.i32}, new WasmType[] {WasmType.i64});
+  static FunctionType selectf32 = new FunctionType(new WasmType[] {WasmType.f32, WasmType.f32, WasmType.i32}, new WasmType[] {WasmType.f32});
+  static FunctionType selectf64 = new FunctionType(new WasmType[] {WasmType.f64, WasmType.f64, WasmType.i32}, new WasmType[] {WasmType.f64});
 
   public static HashMap<Byte, InstructionType> opcodeMap = new HashMap<Byte, InstructionType>();
   public static HashMap<Byte, InstructionType> truncMap = new HashMap<Byte, InstructionType>();
+  public static HashMap<Byte, InstructionType> selectMap = new HashMap<Byte, InstructionType>();
 
   static {
-    opcodeMap.put((byte) 0x00, new InstructionType(Opcodes::temp, nop, new WasmType[0]));
-    opcodeMap.put((byte) 0x01, new InstructionType(Opcodes::temp, nop, new WasmType[0]));
-    opcodeMap.put((byte) 0x1A, new InstructionType(Opcodes::temp, set, new WasmType[0]));
-    opcodeMap.put((byte) 0x1B, new InstructionType(Opcodes::temp, select, new WasmType[0], GenericTypeRequirers.select));
+    opcodeMap.put((byte) 0x00, new InstructionType(Basic::unreachable, nop, new WasmType[0]));
+    opcodeMap.put((byte) 0x01, new InstructionType(Basic::nop, nop, new WasmType[0]));
+    opcodeMap.put((byte) 0x1A, new InstructionType(Basic::drop, drop, new WasmType[0]));
+    opcodeMap.put((byte) 0x1B, new InstructionType(Basic::select, select, new WasmType[0], GenericTypeRequirers.select));
+    selectMap.put((byte) 0x7F, new InstructionType(Basic::select, selecti32, new WasmType[0], GenericTypeRequirers.select));
+    selectMap.put((byte) 0x7E, new InstructionType(Basic::select, selecti64, new WasmType[0], GenericTypeRequirers.select));
+    selectMap.put((byte) 0x7D, new InstructionType(Basic::select, selectf32, new WasmType[0], GenericTypeRequirers.select));
+    selectMap.put((byte) 0x7C, new InstructionType(Basic::select, selectf64, new WasmType[0], GenericTypeRequirers.select));
     opcodeMap.put((byte) 0x20, new InstructionType(Opcodes::temp, get, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local));
     opcodeMap.put((byte) 0x21, new InstructionType(Opcodes::temp, set, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local));
     opcodeMap.put((byte) 0x22, new InstructionType(Opcodes::temp, tee, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local));

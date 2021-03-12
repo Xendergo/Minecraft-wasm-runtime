@@ -112,7 +112,7 @@ public class Expression {
         }
 
         for (int j = instrType.inputs.length - 1; j >= 0; j--) {
-          if (typeStack.pollFirst() != instrType.inputs[j]) {
+          if (typeStack.pollFirst() != instrType.inputs[j] && instrType.inputs[j] != WasmType.any) {
             return false; // type is wrong
           }
         }

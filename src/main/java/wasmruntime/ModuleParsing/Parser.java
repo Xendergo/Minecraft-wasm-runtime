@@ -678,11 +678,22 @@ public class Parser {
         default:
         InstructionType type;
 
-        if (bytes[index - 1] == 0xFC) {
+        switch (bytes[index - 1]) {
+          case 0x1C:
           type = Opcodes.truncMap.get(bytes[index]);
           index++;
-        } else {
+          break;
+
+          case (byte) 0xFC:
+          type = Opcodes.truncMap.get(bytes[index]);
+          index++;
+          break;
+
+          default:
           type = Opcodes.opcodeMap.get(bytes[index - 1]);
+        }
+        if (bytes[index - 1] == 0xFC) {
+        } else {
         }
 
         Value[] immediates = new Value[type.immediates.length];

@@ -14,6 +14,7 @@ import wasmruntime.Modules;
 import wasmruntime.Errors.Trap;
 import wasmruntime.ModuleData.Module;
 import wasmruntime.ModuleData.WasmFunctionInterface;
+import wasmruntime.ModuleExecutor.Value;
 import wasmruntime.ModuleExecutor.ValueF32;
 import wasmruntime.ModuleExecutor.ValueF64;
 import wasmruntime.ModuleExecutor.ValueI32;
@@ -32,25 +33,25 @@ public class Invoke {
     String[] argsStrings = StringUtils.split(arguments, " ");
     if (argsStrings.length != func.type.inputs.length) throw new SimpleCommandExceptionType(new TranslatableText("wasm.commands.error.incorrect_arg_amt", func.type.inputs.length)).create();
     
-    ValueStack stack = new ValueStack(func.getStackSize(), module);
+    Value[] stack = new Value[argsStrings.length];
 
     for (int i = 0; i < argsStrings.length; i++) {
       try {
         switch (func.type.inputs[i]) {
           case i32:
-          stack.push(new ValueI32(Integer.parseInt(argsStrings[i])));
+          stack[i] = new ValueI32(Integer.parseInt(argsStrings[i]));
           break;
   
           case i64:
-          stack.push(new ValueI64(Long.parseLong(argsStrings[i])));
+          stack[i] = new ValueI64(Long.parseLong(argsStrings[i]));
           break;
   
           case f32:
-          stack.push(new ValueF32(Float.parseFloat(argsStrings[i])));
+          stack[i] = new ValueF32(Float.parseFloat(argsStrings[i]));
           break;
   
           case f64:
-          stack.push(new ValueF64(Double.parseDouble(argsStrings[i])));
+          stack[i] = new ValueF64(Double.parseDouble(argsStrings[i]));
           break;
   
           default:
@@ -61,15 +62,17 @@ public class Invoke {
       }
     }
 
+    ValueStack output;
     try {
-		  stack = func.Exec(stack.toArray(), module);
+		  output = func.Exec(stack, module);
     } catch (Trap e) {
       throw new SimpleCommandExceptionType(new LiteralText(e.getMessage())).create();
     } catch (Exception e) {
       e.printStackTrace();
+      return 0;
     }
 
-    Message.broadcast(new TranslatableText("wasm.commands.invoke.return", stack.displayString()), ctx.getSource().getMinecraftServer());
+    Message.broadcast(new TranslatableText("wasm.commands.invoke.return", output.displayString()), ctx.getSource().getMinecraftServer());
 
     return Command.SINGLE_SUCCESS;
   }
