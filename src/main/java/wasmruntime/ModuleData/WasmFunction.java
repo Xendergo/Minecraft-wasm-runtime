@@ -15,7 +15,9 @@ public class WasmFunction extends WasmFunctionInterface {
 
   @Override
   public ValueStack Exec(Value[] stack, Module module) throws Trap {
-    return ExecExpression.Exec(code.expr, module, stack);
+    Value[] locals = new Value[code.locals.size() + code.expr.type.inputs.length];
+    System.arraycopy(stack, 0, locals, 0, stack.length);
+    return ExecExpression.Exec(code.expr, module, locals);
   }
 
   @Override

@@ -29,7 +29,7 @@ public class ExecExpression {
             branchOutput = null;
           }
 
-          i = expr.isLoop && branchDepth == 0 ? 0 : instructions.length - 1;
+          i = expr.isLoop && branchDepth == 0 ? -1 /*1 will be incremented by the for loop*/ : instructions.length - 1;
 
           branchDepth--;
         }
