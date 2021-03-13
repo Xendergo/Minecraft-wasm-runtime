@@ -22,10 +22,8 @@ import wasmruntime.ModuleExecutor.ExecExpression;
 import wasmruntime.ModuleExecutor.Instruction;
 import wasmruntime.ModuleExecutor.InstructionType;
 import wasmruntime.ModuleExecutor.Value;
-import wasmruntime.ModuleExecutor.ValueExternref;
 import wasmruntime.ModuleExecutor.ValueF32;
 import wasmruntime.ModuleExecutor.ValueF64;
-import wasmruntime.ModuleExecutor.ValueFuncref;
 import wasmruntime.ModuleExecutor.ValueI32;
 import wasmruntime.ModuleExecutor.ValueI64;
 import wasmruntime.Operations.ControlFlow;
@@ -125,26 +123,7 @@ public class Parser {
             boolean mutable = bytes[index] == 0;
             index++;
 
-            switch (type) {
-              case i32:
-              module.Globals.add(new ImportedGlobal<ValueI32>(moduleName, importName, mutable, WasmType.i32));
-              break;
-
-              case i64:
-              module.Globals.add(new ImportedGlobal<ValueI64>(moduleName, importName, mutable, WasmType.i64));
-              break;
-
-              case f32:
-              module.Globals.add(new ImportedGlobal<ValueF32>(moduleName, importName, mutable, WasmType.f32));
-              break;
-
-              case f64:
-              module.Globals.add(new ImportedGlobal<ValueF64>(moduleName, importName, mutable, WasmType.f64));
-              break;
-
-              default:
-              throw new WasmParseError("Mystery type " + type + " being imported as a global");
-            }
+            module.Globals.add(new ImportedGlobal(moduleName, importName, mutable, type));
             break;
 
             default:
@@ -208,34 +187,7 @@ public class Parser {
             throw new WasmParseError("Initialization of global value trapped: " + trap.getMessage());
           }
 
-          switch (type) {
-            case i32:
-            module.Globals.add(new Global<ValueI32>((ValueI32)ret, mutable, WasmType.i32));
-            break;
-
-            case i64:
-            module.Globals.add(new Global<ValueI64>((ValueI64)ret, mutable, WasmType.i64));
-            break;
-
-            case f32:
-            module.Globals.add(new Global<ValueF32>((ValueF32)ret, mutable, WasmType.f32));
-            break;
-
-            case f64:
-            module.Globals.add(new Global<ValueF64>((ValueF64)ret, mutable, WasmType.f64));
-            break;
-
-            case funcref:
-            module.Globals.add(new Global<ValueFuncref>((ValueFuncref)ret, mutable, WasmType.funcref));
-            break;
-
-            case externref:
-            module.Globals.add(new Global<ValueExternref>((ValueExternref)ret, mutable, WasmType.externref));
-            break;
-
-            default:
-            throw new WasmParseError("Mystery type " + type + " being used as a global");
-          }
+          module.Globals.add(new Global(ret, mutable, type));
         }
         break;
 
@@ -526,6 +478,7 @@ public class Parser {
     }
   }
 
+  // TODO: this
   public static void printWarning(String str) {
     System.out.println(str);
   }

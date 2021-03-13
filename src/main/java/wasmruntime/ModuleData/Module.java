@@ -14,7 +14,7 @@ public class Module {
   public List<Integer> FunctionTypeIndices = new ArrayList<Integer>();
   public List<Table> Tables = new ArrayList<Table>();
   public List<Memory> Memories = new ArrayList<Memory>();
-  public List<Global<?>> Globals = new ArrayList<Global<?>>();
+  public List<Global> Globals = new ArrayList<Global>();
   public List<Code> Codes = new ArrayList<Code>();
   public Data[] Datas;
 

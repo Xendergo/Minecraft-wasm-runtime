@@ -3,7 +3,7 @@ package wasmruntime.ModuleData;
 import wasmruntime.ModuleData.HelpfulEnums.WasmType;
 import wasmruntime.ModuleExecutor.Value;
 
-public class ImportedGlobal<T extends Value> extends Global<T> {
+public class ImportedGlobal extends Global {
   public String module;
   public String name;
 
@@ -14,9 +14,15 @@ public class ImportedGlobal<T extends Value> extends Global<T> {
     name = nameOof;
 	}
 
-  // Ima do this later
+  // TODO: this
   @Override
-  public T getValue() {
+  public void setValue(Value newValue) {
+    super.setValue(newValue);
+  }
+
+  // TODO: this
+  @Override
+  public Value getValue() {
     return super.getValue();
   }
 

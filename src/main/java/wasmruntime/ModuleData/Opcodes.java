@@ -14,8 +14,21 @@ import wasmruntime.ModuleExecutor.ValueStack;
 import wasmruntime.Operations.Add;
 import wasmruntime.Operations.Basic;
 import wasmruntime.Operations.Const;
+import wasmruntime.Operations.Globals;
 import wasmruntime.Operations.Multiply;
 import wasmruntime.Operations.Remainder;
+
+// Imports for operations
+/*
+package wasmruntime.Operations;
+
+import wasmruntime.ModuleExecutor.ValueF32;
+import wasmruntime.ModuleExecutor.ValueF64;
+import wasmruntime.ModuleExecutor.ValueI32;
+import wasmruntime.ModuleExecutor.ValueI64;
+import wasmruntime.ModuleExecutor.ValueStack;
+import static wasmruntime.ModuleData.Opcodes.*;
+*/
 
 public class Opcodes {
   public static Value[] immediates;
@@ -73,11 +86,8 @@ public class Opcodes {
     opcodeMap.put((byte) 0x1A, new InstructionType(Basic::drop, drop, new WasmType[0]));
     opcodeMap.put((byte) 0x1B, new InstructionType(Basic::select, select, new WasmType[0], GenericTypeRequirers.select));
     opcodeMap.put((byte) 0x1C, new InstructionType(Basic::select, select, new WasmType[0], WasmType.any, GenericTypeRequirers.annotated));
-    opcodeMap.put((byte) 0x20, new InstructionType(Opcodes::temp, get, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local));
-    opcodeMap.put((byte) 0x21, new InstructionType(Opcodes::temp, set, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local));
-    opcodeMap.put((byte) 0x22, new InstructionType(Opcodes::temp, tee, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local));
-    opcodeMap.put((byte) 0x23, new InstructionType(Opcodes::temp, get, new WasmType[] {WasmType.i32}, GenericTypeRequirers.global));
-    opcodeMap.put((byte) 0x24, new InstructionType(Opcodes::temp, set, new WasmType[] {WasmType.i32}, GenericTypeRequirers.global));
+    opcodeMap.put((byte) 0x23, new InstructionType(Globals::get, get, new WasmType[] {WasmType.i32}, GenericTypeRequirers.global));
+    opcodeMap.put((byte) 0x24, new InstructionType(Globals::set, set, new WasmType[] {WasmType.i32}, GenericTypeRequirers.global));
     opcodeMap.put((byte) 0x28, new InstructionType(Opcodes::temp, i32Toi32, new WasmType[] {WasmType.i32, WasmType.i32}));
     opcodeMap.put((byte) 0x29, new InstructionType(Opcodes::temp, i32Toi64, new WasmType[] {WasmType.i32, WasmType.i32}));
     opcodeMap.put((byte) 0x2a, new InstructionType(Opcodes::temp, i32Tof32, new WasmType[] {WasmType.i32, WasmType.i32}));

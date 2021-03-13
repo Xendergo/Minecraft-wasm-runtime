@@ -3,18 +3,22 @@ package wasmruntime.ModuleData;
 import wasmruntime.ModuleData.HelpfulEnums.WasmType;
 import wasmruntime.ModuleExecutor.Value;
 
-public class Global<T extends Value> {
-  private T value;
+public class Global {
+  private Value value;
   public boolean mutable;
   public WasmType type;
 
-  public Global(T valueOof, boolean mutableOof, WasmType typeOof) {
+  public Global(Value valueOof, boolean mutableOof, WasmType typeOof) {
     value = valueOof;
     mutable = mutableOof;
     type = typeOof;
   }
 
-  public T getValue() {
+  public void setValue(Value newValue) {
+    value = newValue;
+  }
+
+  public Value getValue() {
     return value;
   }
 
