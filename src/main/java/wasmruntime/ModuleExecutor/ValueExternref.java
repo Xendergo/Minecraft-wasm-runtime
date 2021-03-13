@@ -1,9 +1,9 @@
 package wasmruntime.ModuleExecutor;
 
 public class ValueExternref implements Value {
-  public long value = 0;
+  public int value = 0;
 
-  public ValueExternref(long val) {
+  public ValueExternref(int val) {
     value = val;
   }
 

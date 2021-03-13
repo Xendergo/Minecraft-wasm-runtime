@@ -17,6 +17,7 @@ public class Module {
   public List<Global> Globals = new ArrayList<Global>();
   public List<Code> Codes = new ArrayList<Code>();
   public Data[] Datas;
+  public List<Element> Elements = new ArrayList<Element>();
 
   public List<WasmFunctionInterface> Functions = new ArrayList<WasmFunctionInterface>();
 

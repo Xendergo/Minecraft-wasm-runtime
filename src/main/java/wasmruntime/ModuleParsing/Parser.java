@@ -3,6 +3,7 @@ package wasmruntime.ModuleParsing;
 import wasmruntime.ModuleData.BlockType;
 import wasmruntime.ModuleData.Code;
 import wasmruntime.ModuleData.Data;
+import wasmruntime.ModuleData.Element;
 import wasmruntime.ModuleData.Export;
 import wasmruntime.ModuleData.Expression;
 import wasmruntime.ModuleData.FunctionType;
@@ -15,6 +16,7 @@ import wasmruntime.ModuleData.Module;
 import wasmruntime.ModuleData.Opcodes;
 import wasmruntime.ModuleData.Table;
 import wasmruntime.ModuleData.WasmFunction;
+import wasmruntime.ModuleData.HelpfulEnums.ElementTypes;
 import wasmruntime.ModuleData.HelpfulEnums.ExportTypes;
 import wasmruntime.ModuleData.HelpfulEnums.GenericTypeRequirers;
 import wasmruntime.ModuleData.HelpfulEnums.WasmType;
@@ -22,8 +24,10 @@ import wasmruntime.ModuleExecutor.ExecExpression;
 import wasmruntime.ModuleExecutor.Instruction;
 import wasmruntime.ModuleExecutor.InstructionType;
 import wasmruntime.ModuleExecutor.Value;
+import wasmruntime.ModuleExecutor.ValueExternref;
 import wasmruntime.ModuleExecutor.ValueF32;
 import wasmruntime.ModuleExecutor.ValueF64;
+import wasmruntime.ModuleExecutor.ValueFuncref;
 import wasmruntime.ModuleExecutor.ValueI32;
 import wasmruntime.ModuleExecutor.ValueI64;
 import wasmruntime.Operations.ControlFlow;
@@ -244,32 +248,107 @@ public class Parser {
         index += offset;
 
         for (int i = 0; i < elementAmt; i++) {
-          int tableIndex = readInt(bytes, index);
+          int elementType = readInt(bytes, index);
           index += offset;
 
-          blockTypeStack.addFirst(new BlockType(new FunctionType(WasmType.i32)));
-          Expression expr = readExpr(bytes, index, module, new WasmType[0]);
-          expr.type = blockTypeStack.pollFirst().type;
+          boolean passive = (elementType & 1) == 1;
+
+          boolean declarative = false;
+
+          int tableIndex = 0;
+
+          if (passive) {
+            declarative = (elementType & 2) == 2;
+          } else {
+            if ((elementType & 2) == 2) {
+              tableIndex = readInt(bytes, index);
+              index += offset;
+            } else {
+              tableIndex = 0;
+            }
+          }
+
+          int tableOffset = 0;
+
+          WasmType type = WasmType.funcref;
+
+          if ((elementType & 4) == 0) {
+            if (!passive) {
+              blockTypeStack.addFirst(new BlockType(new FunctionType(WasmType.i32)));
+              Expression expr = readExpr(bytes, index, module, new WasmType[0]);
+              expr.type = blockTypeStack.pollFirst().type;
+              index += offset;
+    
+              if (!expr.IsValid(true, module)) {
+                throw new WasmParseError("Constant expression for offset of values in table "+tableIndex+" is invalid");
+              }
+    
+              try {
+                tableOffset = ((ValueI32)ExecExpression.Exec(expr, module, new Value[0]).stack[0]).value;
+              } catch (Trap trap) {
+                throw new WasmParseError("Initialization of table offset trapped: " + trap.getMessage());
+              }
+            }
+
+            if ((elementType & 3) != 0) {
+              type = WasmType.elemKindMap.get(bytes[index]);
+              index++;
+            }
+          } else {
+            if ((elementType & 3) != 0) {
+              type = WasmType.refMap.get(bytes[index]);
+              index++;
+            }
+          }
+
+          Value[] values = new Value[readInt(bytes, index)];
           index += offset;
 
-          if (!expr.IsValid(true, module)) {
-            throw new WasmParseError("Constant expression for offset of values in table "+tableIndex+" is invalid");
+          if ((elementType & 4) == 0) {
+            switch (type) {
+              case funcref:
+              for (int j = 0; j < values.length; j++) {
+                values[j] = new ValueFuncref(readInt(bytes, index));
+                index += offset;
+              }
+              break;
+
+              case externref:
+              for (int j = 0; j < values.length; j++) {
+                values[j] = new ValueExternref(readInt(bytes, index));
+                index += offset;
+              }
+              break;
+
+              default:
+              throw new WasmParseError("Can't have an element section with type " + type);
+            }
+          } else {
+            for (int j = 0; j < values.length; j++) {
+              blockTypeStack.addFirst(new BlockType(new FunctionType(type)));
+              Expression expr = readExpr(bytes, index, module, new WasmType[0]);
+              expr.type = blockTypeStack.pollFirst().type;
+              index += offset;
+    
+              if (!expr.IsValid(true, module)) {
+                throw new WasmParseError("Constant expression for intialization value in table "+tableIndex+" is invalid");
+              }
+    
+              try {
+                values[j] = ExecExpression.Exec(expr, module, new Value[0]).stack[0];
+              } catch (Trap trap) {
+                throw new WasmParseError("Initialization of value in table trapped: " + trap.getMessage());
+              }
+            }
           }
 
-          int tableOffset;
-          try {
-            tableOffset = ((ValueI32)ExecExpression.Exec(expr, module, new Value[0]).stack[0]).value;
-          } catch (Trap trap) {
-            throw new WasmParseError("Initialization of table offset trapped: " + trap.getMessage());
+          Element elem = new Element(values, type, passive ? declarative ? ElementTypes.declarative : ElementTypes.passive : ElementTypes.active);
+
+          if (!passive) {
+            module.Tables.get(tableIndex).Initialize(elem, tableOffset);
           }
 
-          int vecAmt = readInt(bytes, index);
-          index += offset;
-
-          for (int j = 0; j < vecAmt; j++) {
-            module.Tables.get(tableIndex).values.put(tableOffset+j, readInt(bytes, index));
-            index += offset;
-          }
+          module.Elements.add(elem);
         }
         break;
 

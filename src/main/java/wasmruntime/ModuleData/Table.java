@@ -1,18 +1,22 @@
 package wasmruntime.ModuleData;
 
-import java.util.HashMap;
-
 import wasmruntime.ModuleData.HelpfulEnums.WasmType;
+import wasmruntime.ModuleExecutor.Value;
 
 public class Table {
   public Limit limits;
   public WasmType type;
 
-  public HashMap<Integer, Integer> values = new HashMap<Integer, Integer>();
+  public Value[] values = new Value[0];
 
   public Table(Limit limitsOof, WasmType typeOof) {
     limits = limitsOof;
+    values = new Value[limits.min];
     type = typeOof;
+  }
+
+  public void Initialize(Element elem, int offset) {
+    System.arraycopy(elem.data, 0, values, offset, elem.data.length);
   }
 
   public boolean IsValid() {

@@ -22,6 +22,8 @@ public enum WasmType {
   public static HashSet<WasmType> numtypeSet = new HashSet<WasmType>();
   public static HashSet<WasmType> reftypeSet = new HashSet<WasmType>();
 
+  public static HashMap<Byte, WasmType> elemKindMap = new HashMap<Byte, WasmType>();
+
   public static boolean equal(WasmType a, WasmType b) {
     if (a == b) return true;
     if (a == any || b == any) return true;
@@ -47,6 +49,8 @@ public enum WasmType {
     numMap.put((byte) 0x7C, f64);
     refMap.put((byte) 0x70, funcref);
     refMap.put((byte) 0x6f, externref);
+
+    elemKindMap.put((byte) 0x00, funcref);
 
     numtypeSet.add(i32);
     numtypeSet.add(i64);

@@ -6,10 +6,12 @@ import wasmruntime.ModuleData.HelpfulEnums.GenericTypeRequirers;
 import wasmruntime.ModuleData.HelpfulEnums.WasmType;
 import wasmruntime.ModuleExecutor.InstructionType;
 import wasmruntime.ModuleExecutor.Value;
+import wasmruntime.ModuleExecutor.ValueExternref;
 import wasmruntime.ModuleExecutor.ValueI32;
 import wasmruntime.ModuleExecutor.ValueF32;
 import wasmruntime.ModuleExecutor.ValueI64;
 import wasmruntime.ModuleExecutor.ValueF64;
+import wasmruntime.ModuleExecutor.ValueFuncref;
 import wasmruntime.ModuleExecutor.ValueStack;
 import wasmruntime.Operations.Add;
 import wasmruntime.Operations.Basic;
@@ -38,6 +40,10 @@ public class Opcodes {
   public static FunctionType get = new FunctionType(WasmType.T);
   public static FunctionType set = new FunctionType(new WasmType[] {WasmType.T}, new WasmType[0]);
   public static FunctionType tee = new FunctionType(new WasmType[] {WasmType.T}, new WasmType[] {WasmType.T});
+
+  public static FunctionType tableGet = new FunctionType(new WasmType[] {WasmType.i32}, new WasmType[] {WasmType.T});
+  public static FunctionType tableSet = new FunctionType(new WasmType[] {WasmType.i32, WasmType.T}, new WasmType[0]);
+  public static FunctionType threeI32 = new FunctionType(new WasmType[] {WasmType.i32, WasmType.i32, WasmType.i32}, new WasmType[0]);
 
   static FunctionType i32Toi32 = new FunctionType(new WasmType[] {WasmType.i32}, new WasmType[] {WasmType.i32});
   static FunctionType i64Toi32 = new FunctionType(new WasmType[] {WasmType.i64}, new WasmType[] {WasmType.i32});
@@ -88,6 +94,9 @@ public class Opcodes {
     opcodeMap.put((byte) 0x1C, new InstructionType(Basic::select, select, new WasmType[0], WasmType.any, GenericTypeRequirers.annotated));
     opcodeMap.put((byte) 0x23, new InstructionType(Globals::get, get, new WasmType[] {WasmType.i32}, GenericTypeRequirers.global));
     opcodeMap.put((byte) 0x24, new InstructionType(Globals::set, set, new WasmType[] {WasmType.i32}, GenericTypeRequirers.global));
+    opcodeMap.put((byte) 0x25, new InstructionType(Opcodes::temp, tableGet, new WasmType[] {WasmType.i32}, GenericTypeRequirers.table));
+    opcodeMap.put((byte) 0x26, new InstructionType(Opcodes::temp, tableSet, new WasmType[] {WasmType.i32}, GenericTypeRequirers.table));
+    opcodeExtendedMap.put((byte) 0x0C, new InstructionType(Opcodes::temp, threeI32, new WasmType[] {WasmType.i32, WasmType.i32}));
     opcodeMap.put((byte) 0x28, new InstructionType(Opcodes::temp, i32Toi32, new WasmType[] {WasmType.i32, WasmType.i32}));
     opcodeMap.put((byte) 0x29, new InstructionType(Opcodes::temp, i32Toi64, new WasmType[] {WasmType.i32, WasmType.i32}));
     opcodeMap.put((byte) 0x2a, new InstructionType(Opcodes::temp, i32Tof32, new WasmType[] {WasmType.i32, WasmType.i32}));
@@ -272,6 +281,14 @@ public class Opcodes {
     return ((ValueF64)v).value;
   }
 
+  public static int funcref(Value v) {
+    return ((ValueFuncref)v).value;
+  }
+
+  public static int externref(Value v) {
+    return ((ValueExternref)v).value;
+  }
+
   public static int i32(ValueStack v) {
     return ((ValueI32)v.pop()).value;
   }
@@ -286,6 +303,14 @@ public class Opcodes {
 
   public static double f64(ValueStack v) {
     return ((ValueF64)(v.pop())).value;
+  }
+
+  public static int funcref(ValueStack v) {
+    return ((ValueFuncref)(v.pop())).value;
+  }
+
+  public static int externref(ValueStack v) {
+    return ((ValueExternref)(v.pop())).value;
   }
 
   private static void temp(ValueStack stack) {
