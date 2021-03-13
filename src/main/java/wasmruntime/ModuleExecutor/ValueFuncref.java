@@ -1,9 +1,9 @@
 package wasmruntime.ModuleExecutor;
 
 public class ValueFuncref implements Value {
-  public long value = 0;
+  public int value = 0;
 
-  public ValueFuncref(long val) {
+  public ValueFuncref(int val) {
     value = val;
   }
 

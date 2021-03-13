@@ -2,6 +2,7 @@ package wasmruntime.ModuleParsing;
 
 import wasmruntime.ModuleData.BlockType;
 import wasmruntime.ModuleData.Code;
+import wasmruntime.ModuleData.Data;
 import wasmruntime.ModuleData.Export;
 import wasmruntime.ModuleData.Expression;
 import wasmruntime.ModuleData.FunctionType;
@@ -196,7 +197,7 @@ public class Parser {
           expr.type = blockTypeStack.pollFirst().type;
           index += offset;
 
-          if (!expr.IsValid(true, module.Globals.toArray(new Global[0]))) {
+          if (!expr.IsValid(true, module)) {
             throw new WasmParseError("Invalid global initializer with global index " + i);
           }
 
@@ -299,7 +300,7 @@ public class Parser {
           expr.type = blockTypeStack.pollFirst().type;
           index += offset;
 
-          if (!expr.IsValid(true, module.Globals.toArray(new Global[0]))) {
+          if (!expr.IsValid(true, module)) {
             throw new WasmParseError("Constant expression for offset of values in table "+tableIndex+" is invalid");
           }
 
@@ -364,39 +365,67 @@ public class Parser {
         index += offset;
 
         for (int i = 0; i < dataAmt; i++) {
-          int memoryIndex = readInt(bytes, index);
-          index += offset;
+          int dataType = bytes[index];
+          index++;
 
-          blockTypeStack.addFirst(new BlockType(new FunctionType(WasmType.i32)));
-          Expression expr = readExpr(bytes, index, module, new WasmType[0]);
-          expr.type = blockTypeStack.pollFirst().type;
-          index += offset;
+          if (dataType == 1) {
+            int byteAmt = readInt(bytes, index);
+            index += offset;
 
-          if (!expr.IsValid(true, module.Globals.toArray(new Global[0]))) {
-            throw new WasmParseError("Constant expression for offset of data index " + i + "is invalid");
-          }
+            module.Datas[i] = new Data(Arrays.copyOfRange(bytes, index, index + byteAmt));
 
-          int memoryOffset;
-          try {
-            memoryOffset = ((ValueI32)ExecExpression.Exec(expr, module, new Value[0]).stack[0]).value;
-          } catch (Trap trap) {
-            throw new WasmParseError("Initialization of offset in data section trapped: " + trap.getMessage());
-          }
+            index += byteAmt;
+          } else {
+            int memoryIndex;
 
-          int byteAmt = readInt(bytes, index);
-          index += offset;
-
-          byte[] memory = module.Memories.get(memoryIndex).data;
-          byte[] data = Arrays.copyOfRange(bytes, index, index + byteAmt);
-
-          try {
-            for (int j = 0; j < byteAmt; j++) {
-              memory[j + memoryOffset] = data[j];
+            if (dataType == 0) {
+              memoryIndex = 0;
+            } else {
+              memoryIndex = readInt(bytes, index);
+              index += offset;
             }
-          } catch (ArrayIndexOutOfBoundsException e) {
-            throw new WasmParseError("Not enough memory to be able to store the data at index " + memoryOffset);
+
+            blockTypeStack.addFirst(new BlockType(new FunctionType(WasmType.i32)));
+            Expression expr = readExpr(bytes, index, module, new WasmType[0]);
+            expr.type = blockTypeStack.pollFirst().type;
+            index += offset;
+  
+            if (!expr.IsValid(true, module)) {
+              throw new WasmParseError("Constant expression for offset of data index " + i + "is invalid");
+            }
+  
+            int memoryOffset;
+            try {
+              memoryOffset = ((ValueI32)ExecExpression.Exec(expr, module, new Value[0]).stack[0]).value;
+            } catch (Trap trap) {
+              throw new WasmParseError("Initialization of offset in data section trapped: " + trap.getMessage());
+            }
+  
+            int byteAmt = readInt(bytes, index);
+            index += offset;
+  
+            byte[] memory = module.Memories.get(memoryIndex).data;
+            byte[] data = Arrays.copyOfRange(bytes, index, index + byteAmt);
+            index += byteAmt;
+
+            if (module.Datas != null) {
+              module.Datas[i] = new Data(data);
+            }
+  
+            try {
+              for (int j = 0; j < byteAmt; j++) {
+                memory[j + memoryOffset] = data[j];
+              }
+            } catch (ArrayIndexOutOfBoundsException e) {
+              throw new WasmParseError("Not enough memory to be able to store the data at index " + memoryOffset);
+            }
           }
         }
+        break;
+
+        case 12:
+        module.Datas = new Data[readInt(bytes, index)];
+        index += offset;
         break;
 
         default:
@@ -499,6 +528,24 @@ public class Parser {
 
   public static void printWarning(String str) {
     System.out.println(str);
+  }
+
+  public static WasmType readTypeAnnotation(byte[] bytes, int start, WasmType allowedTypes) throws WasmParseError {
+    byte code = bytes[start];
+    offset = 1;
+    switch (allowedTypes) {
+      case any:
+      return WasmType.typeMap.get(code);
+
+      case numtype:
+      return WasmType.numMap.get(code);
+
+      case reftype:
+      return WasmType.refMap.get(code);
+
+      default:
+      throw new WasmParseError(allowedTypes + " isn't a type that can be used as a set of allowed types");
+    }
   }
 
   private static LinkedList<BlockType> blockTypeStack = new LinkedList<BlockType>();
@@ -692,18 +739,19 @@ public class Parser {
         InstructionType type;
 
         switch (bytes[index - 1]) {
-          case 0x1C:
-          type = Opcodes.selectMap.get(bytes[index]);
-          index++;
-          break;
-
           case (byte) 0xFC:
-          type = Opcodes.truncMap.get(bytes[index]);
+          type = Opcodes.opcodeExtendedMap.get(bytes[index]);
           index++;
           break;
 
           default:
           type = Opcodes.opcodeMap.get(bytes[index - 1]);
+        }
+
+        WasmType typeAnnotation = null;
+
+        if (type.allowedAnnotations != null) {
+          typeAnnotation = readTypeAnnotation(bytes, index, type.allowedAnnotations);
         }
 
         Value[] immediates = new Value[type.immediates.length];
@@ -733,7 +781,7 @@ public class Parser {
           index += offset;
         }
 
-        instructions.add(new Instruction(type, immediates));
+        instructions.add(new Instruction(type, immediates, typeAnnotation));
       }
     }
 

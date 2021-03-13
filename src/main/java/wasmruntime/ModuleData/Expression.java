@@ -42,7 +42,7 @@ public class Expression {
     localTypes = locals;
   }
 
-  public boolean IsValid(boolean isConstant, Global<?>[] globals) {
+  public boolean IsValid(boolean isConstant, Module module) {
     try {
       LinkedList<WasmType> typeStack = new LinkedList<WasmType>();
 
@@ -67,7 +67,7 @@ public class Expression {
         if (op.genericTypeUse != GenericTypeRequirers.none) {
           instrType = new FunctionType(instrType);
 
-          WasmType genericType;
+          WasmType genericType = WasmType.any;
 
           switch (op.genericTypeUse) {
             case local:
@@ -75,14 +75,22 @@ public class Expression {
             break;
 
             case global:
-            genericType = globals[((ValueI32)instr.immediates[0]).value].type;
+            genericType = module.Globals.get(((ValueI32)instr.immediates[0]).value).type;
             break;
 
             case select:
             genericType = typeStack.get(typeStack.size() - 1);
             break;
 
-            default:
+            case table:
+            genericType = module.Tables.get(((ValueI32)instr.immediates[0]).value).type;
+            break;
+
+            case annotated:
+            genericType = instr.typeAnnotation;
+            break;
+
+            case none:
             // This should be unreachable
             System.out.println("Something's terribly broken when finding generic type");
             return false;
@@ -107,7 +115,7 @@ public class Expression {
             Expression block = Blocks.get(Opcodes.i32(immediate));
             block.isBlock = true;
             block.localTypes = thisLocals;
-            if (!block.IsValid(isConstant, globals)) return false;
+            if (!block.IsValid(isConstant, module)) return false;
           }
         }
 

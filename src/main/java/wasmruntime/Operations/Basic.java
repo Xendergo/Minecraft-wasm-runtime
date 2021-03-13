@@ -1,10 +1,6 @@
 package wasmruntime.Operations;
 
 import wasmruntime.ModuleExecutor.Value;
-import wasmruntime.ModuleExecutor.ValueF32;
-import wasmruntime.ModuleExecutor.ValueF64;
-import wasmruntime.ModuleExecutor.ValueI32;
-import wasmruntime.ModuleExecutor.ValueI64;
 import wasmruntime.ModuleExecutor.ValueStack;
 import static wasmruntime.ModuleData.Opcodes.*;
 

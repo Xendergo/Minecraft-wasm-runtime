@@ -16,6 +16,7 @@ public class Module {
   public List<Memory> Memories = new ArrayList<Memory>();
   public List<Global<?>> Globals = new ArrayList<Global<?>>();
   public List<Code> Codes = new ArrayList<Code>();
+  public Data[] Datas;
 
   public List<WasmFunctionInterface> Functions = new ArrayList<WasmFunctionInterface>();
 
@@ -35,7 +36,7 @@ public class Module {
     }
 
     for (int i = 0; i < Codes.size(); i++) {
-      if (!Codes.get(i).IsValid(Globals.toArray(new Global[0]))) throw new WasmValidationError("Code index " + i + " is invalid");
+      if (!Codes.get(i).IsValid(this)) throw new WasmValidationError("Code index " + i + " is invalid");
     }
   }
 }

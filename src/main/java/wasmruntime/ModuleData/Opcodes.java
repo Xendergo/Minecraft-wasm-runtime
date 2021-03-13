@@ -63,28 +63,16 @@ public class Opcodes {
   static FunctionType operatorf64 = new FunctionType(new WasmType[] {WasmType.f64, WasmType.f64}, new WasmType[] {WasmType.f64});
 
   static FunctionType select = new FunctionType(new WasmType[] {WasmType.T, WasmType.T, WasmType.i32}, new WasmType[] {WasmType.T});
-  static FunctionType selecti32 = new FunctionType(new WasmType[] {WasmType.i32, WasmType.i32, WasmType.i32}, new WasmType[] {WasmType.i32});
-  static FunctionType selecti64 = new FunctionType(new WasmType[] {WasmType.i64, WasmType.i64, WasmType.i32}, new WasmType[] {WasmType.i64});
-  static FunctionType selectf32 = new FunctionType(new WasmType[] {WasmType.f32, WasmType.f32, WasmType.i32}, new WasmType[] {WasmType.f32});
-  static FunctionType selectf64 = new FunctionType(new WasmType[] {WasmType.f64, WasmType.f64, WasmType.i32}, new WasmType[] {WasmType.f64});
-  static FunctionType selectfuncref = new FunctionType(new WasmType[] {WasmType.funcref, WasmType.funcref, WasmType.i32}, new WasmType[] {WasmType.funcref});
-  static FunctionType selectexernref = new FunctionType(new WasmType[] {WasmType.externref, WasmType.externref, WasmType.i32}, new WasmType[] {WasmType.externref});
 
   public static HashMap<Byte, InstructionType> opcodeMap = new HashMap<Byte, InstructionType>();
-  public static HashMap<Byte, InstructionType> truncMap = new HashMap<Byte, InstructionType>();
-  public static HashMap<Byte, InstructionType> selectMap = new HashMap<Byte, InstructionType>();
+  public static HashMap<Byte, InstructionType> opcodeExtendedMap = new HashMap<Byte, InstructionType>();
 
   static {
     opcodeMap.put((byte) 0x00, new InstructionType(Basic::unreachable, nop, new WasmType[0]));
     opcodeMap.put((byte) 0x01, new InstructionType(Basic::nop, nop, new WasmType[0]));
     opcodeMap.put((byte) 0x1A, new InstructionType(Basic::drop, drop, new WasmType[0]));
     opcodeMap.put((byte) 0x1B, new InstructionType(Basic::select, select, new WasmType[0], GenericTypeRequirers.select));
-    selectMap.put((byte) 0x7F, new InstructionType(Basic::select, selecti32, new WasmType[0], GenericTypeRequirers.select));
-    selectMap.put((byte) 0x7E, new InstructionType(Basic::select, selecti64, new WasmType[0], GenericTypeRequirers.select));
-    selectMap.put((byte) 0x7D, new InstructionType(Basic::select, selectf32, new WasmType[0], GenericTypeRequirers.select));
-    selectMap.put((byte) 0x7C, new InstructionType(Basic::select, selectf64, new WasmType[0], GenericTypeRequirers.select));
-    selectMap.put((byte) 0x70, new InstructionType(Basic::select, selectfuncref, new WasmType[0], GenericTypeRequirers.select));
-    selectMap.put((byte) 0x6F, new InstructionType(Basic::select, selectexernref, new WasmType[0], GenericTypeRequirers.select));
+    opcodeMap.put((byte) 0x1C, new InstructionType(Basic::select, select, new WasmType[0], WasmType.any, GenericTypeRequirers.annotated));
     opcodeMap.put((byte) 0x20, new InstructionType(Opcodes::temp, get, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local));
     opcodeMap.put((byte) 0x21, new InstructionType(Opcodes::temp, set, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local));
     opcodeMap.put((byte) 0x22, new InstructionType(Opcodes::temp, tee, new WasmType[] {WasmType.i32}, GenericTypeRequirers.local));
@@ -248,14 +236,14 @@ public class Opcodes {
     opcodeMap.put((byte) 0xc3, new InstructionType(Opcodes::temp, i64Toi64, new WasmType[0]));
     opcodeMap.put((byte) 0xc4, new InstructionType(Opcodes::temp, i64Toi64, new WasmType[0]));
 
-    truncMap.put((byte) 0, new InstructionType(Opcodes::temp, f32Toi32, new WasmType[0]));
-    truncMap.put((byte) 1, new InstructionType(Opcodes::temp, f32Toi32, new WasmType[0]));
-    truncMap.put((byte) 2, new InstructionType(Opcodes::temp, f64Toi32, new WasmType[0]));
-    truncMap.put((byte) 3, new InstructionType(Opcodes::temp, f64Toi32, new WasmType[0]));
-    truncMap.put((byte) 4, new InstructionType(Opcodes::temp, f32Toi64, new WasmType[0]));
-    truncMap.put((byte) 5, new InstructionType(Opcodes::temp, f32Toi64, new WasmType[0]));
-    truncMap.put((byte) 6, new InstructionType(Opcodes::temp, f64Toi64, new WasmType[0]));
-    truncMap.put((byte) 7, new InstructionType(Opcodes::temp, f64Toi64, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 0, new InstructionType(Opcodes::temp, f32Toi32, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 1, new InstructionType(Opcodes::temp, f32Toi32, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 2, new InstructionType(Opcodes::temp, f64Toi32, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 3, new InstructionType(Opcodes::temp, f64Toi32, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 4, new InstructionType(Opcodes::temp, f32Toi64, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 5, new InstructionType(Opcodes::temp, f32Toi64, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 6, new InstructionType(Opcodes::temp, f64Toi64, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 7, new InstructionType(Opcodes::temp, f64Toi64, new WasmType[0]));
   }
 
   public static int i32(Value v) {

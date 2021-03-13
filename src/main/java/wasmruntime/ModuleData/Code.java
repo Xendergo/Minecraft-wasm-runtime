@@ -14,8 +14,8 @@ public class Code {
     expr = exprOof;
   }
 
-  public boolean IsValid(Global<?>[] globals) {
-    return expr.IsValid(false, globals);
+  public boolean IsValid(Module module) {
+    return expr.IsValid(false, module);
   }
 
   public String toString() {

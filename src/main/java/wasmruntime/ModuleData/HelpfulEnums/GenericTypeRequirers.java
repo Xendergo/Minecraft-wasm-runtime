@@ -4,5 +4,7 @@ public enum GenericTypeRequirers {
   local,
   global,
   select,
-  none; 
+  none,
+  table,
+  annotated; 
 }
