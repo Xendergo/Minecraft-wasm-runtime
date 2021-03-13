@@ -2,15 +2,15 @@ package wasmruntime.ModuleData;
 
 import java.util.HashMap;
 
-import wasmruntime.ModuleData.HelpfulEnums.ElementType;
+import wasmruntime.ModuleData.HelpfulEnums.WasmType;
 
 public class Table {
   public Limit limits;
-  public ElementType type;
+  public WasmType type;
 
   public HashMap<Integer, Integer> values = new HashMap<Integer, Integer>();
 
-  public Table(Limit limitsOof, ElementType typeOof) {
+  public Table(Limit limitsOof, WasmType typeOof) {
     limits = limitsOof;
     type = typeOof;
   }

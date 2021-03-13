@@ -14,7 +14,6 @@ import wasmruntime.ModuleData.Module;
 import wasmruntime.ModuleData.Opcodes;
 import wasmruntime.ModuleData.Table;
 import wasmruntime.ModuleData.WasmFunction;
-import wasmruntime.ModuleData.HelpfulEnums.ElementType;
 import wasmruntime.ModuleData.HelpfulEnums.ExportTypes;
 import wasmruntime.ModuleData.HelpfulEnums.GenericTypeRequirers;
 import wasmruntime.ModuleData.HelpfulEnums.WasmType;
@@ -22,8 +21,10 @@ import wasmruntime.ModuleExecutor.ExecExpression;
 import wasmruntime.ModuleExecutor.Instruction;
 import wasmruntime.ModuleExecutor.InstructionType;
 import wasmruntime.ModuleExecutor.Value;
+import wasmruntime.ModuleExecutor.ValueExternref;
 import wasmruntime.ModuleExecutor.ValueF32;
 import wasmruntime.ModuleExecutor.ValueF64;
+import wasmruntime.ModuleExecutor.ValueFuncref;
 import wasmruntime.ModuleExecutor.ValueI32;
 import wasmruntime.ModuleExecutor.ValueI64;
 import wasmruntime.Operations.ControlFlow;
@@ -166,7 +167,7 @@ public class Parser {
         index += offset;
 
         for (int i = 0; i < tableAmt; i++) {
-          ElementType type = ElementType.elementTypeMap.get(bytes[index]);
+          WasmType type = WasmType.refMap.get(bytes[index]);
           index++;
           Limit limit = readLimit(bytes, index);
           module.Tables.add(new Table(limit, type));
@@ -221,6 +222,14 @@ public class Parser {
 
             case f64:
             module.Globals.add(new Global<ValueF64>((ValueF64)ret, mutable, WasmType.f64));
+            break;
+
+            case funcref:
+            module.Globals.add(new Global<ValueFuncref>((ValueFuncref)ret, mutable, WasmType.funcref));
+            break;
+
+            case externref:
+            module.Globals.add(new Global<ValueExternref>((ValueExternref)ret, mutable, WasmType.externref));
             break;
 
             default:
@@ -641,17 +650,21 @@ public class Parser {
 
         case 0x11:
         if (module.Tables.size() == 0) throw new WasmParseError("Can't use call_indirect, there are no tables defined");
-        if (module.Tables.get(0).type != ElementType.funcref) throw new WasmParseError("Can't use call_indirect, table 0 is not of type funcref");
-
+        
         int typeIndex = readInt(bytes, index);
         index += offset;
+
+        int tableIndex = readInt(bytes, index);
+        index += offset;
+
+        if (module.Tables.get(tableIndex).type != WasmType.funcref) throw new WasmParseError("Can't use call_indirect, table 0 is not of type funcref");
 
         FunctionType oldType = module.TypeSection.get(typeIndex);
         newType = new FunctionType(new WasmType[oldType.inputs.length + 1], oldType.outputs);
         System.arraycopy(oldType.inputs, 0, newType.inputs, 0, oldType.inputs.length);
         newType.inputs[newType.inputs.length - 1] = WasmType.i32;
 
-        instructions.add(new Instruction(new InstructionType(Functions::callIndirect, newType, new WasmType[] {WasmType.i32}), new Value[] {new ValueI32(typeIndex)}));
+        instructions.add(new Instruction(new InstructionType(Functions::callIndirect, newType, new WasmType[] {WasmType.i32, WasmType.i32}), new Value[] {new ValueI32(typeIndex), new ValueI32(tableIndex)}));
         break;
 
         case 0x20:
@@ -680,7 +693,7 @@ public class Parser {
 
         switch (bytes[index - 1]) {
           case 0x1C:
-          type = Opcodes.truncMap.get(bytes[index]);
+          type = Opcodes.selectMap.get(bytes[index]);
           index++;
           break;
 
@@ -691,9 +704,6 @@ public class Parser {
 
           default:
           type = Opcodes.opcodeMap.get(bytes[index - 1]);
-        }
-        if (bytes[index - 1] == 0xFC) {
-        } else {
         }
 
         Value[] immediates = new Value[type.immediates.length];
