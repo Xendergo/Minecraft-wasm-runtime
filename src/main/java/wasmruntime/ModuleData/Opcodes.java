@@ -18,22 +18,26 @@ import wasmruntime.Operations.Basic;
 import wasmruntime.Operations.Const;
 import wasmruntime.Operations.Globals;
 import wasmruntime.Operations.Multiply;
+import wasmruntime.Operations.Reference;
 import wasmruntime.Operations.Remainder;
 
-// Imports for operations
-/*
-package wasmruntime.Operations;
+// Imports for operations (good for copy/paste)
 
+/*
 import wasmruntime.ModuleExecutor.ValueF32;
 import wasmruntime.ModuleExecutor.ValueF64;
 import wasmruntime.ModuleExecutor.ValueI32;
 import wasmruntime.ModuleExecutor.ValueI64;
+import wasmruntime.ModuleExecutor.ValueFuncref;
+import wasmruntime.ModuleExecutor.Value;
+import wasmruntime.ModuleExecutor.ValueExternref;
 import wasmruntime.ModuleExecutor.ValueStack;
 import static wasmruntime.ModuleData.Opcodes.*;
 */
 
 public class Opcodes {
   public static Value[] immediates;
+  public static WasmType currentTypeAnnotation;
   
   static FunctionType nop = new FunctionType();
   static FunctionType drop = new FunctionType(new WasmType[] {WasmType.any}, new WasmType[0]);
@@ -44,6 +48,9 @@ public class Opcodes {
   public static FunctionType tableGet = new FunctionType(new WasmType[] {WasmType.i32}, new WasmType[] {WasmType.T});
   public static FunctionType tableSet = new FunctionType(new WasmType[] {WasmType.i32, WasmType.T}, new WasmType[0]);
   public static FunctionType threeI32 = new FunctionType(new WasmType[] {WasmType.i32, WasmType.i32, WasmType.i32}, new WasmType[0]);
+
+  public static FunctionType getFuncref = new FunctionType(new WasmType[0], new WasmType[] {WasmType.funcref});
+  public static FunctionType genericToI32 = new FunctionType(new WasmType[] {WasmType.T}, new WasmType[] {WasmType.i32});
 
   static FunctionType i32Toi32 = new FunctionType(new WasmType[] {WasmType.i32}, new WasmType[] {WasmType.i32});
   static FunctionType i64Toi32 = new FunctionType(new WasmType[] {WasmType.i64}, new WasmType[] {WasmType.i32});
@@ -254,6 +261,9 @@ public class Opcodes {
     opcodeMap.put((byte) 0xc2, new InstructionType(Opcodes::temp, i64Toi64, new WasmType[0]));
     opcodeMap.put((byte) 0xc3, new InstructionType(Opcodes::temp, i64Toi64, new WasmType[0]));
     opcodeMap.put((byte) 0xc4, new InstructionType(Opcodes::temp, i64Toi64, new WasmType[0]));
+    opcodeMap.put((byte) 0xd0, new InstructionType(Reference::nullRef, get, new WasmType[0], WasmType.reftype, GenericTypeRequirers.annotated));
+    opcodeMap.put((byte) 0xd1, new InstructionType(Reference::isNull, genericToI32, new WasmType[0]));
+    opcodeMap.put((byte) 0xd2, new InstructionType(Reference::func, getFuncref, new WasmType[] {WasmType.i32}));
 
     opcodeExtendedMap.put((byte) 0, new InstructionType(Opcodes::temp, f32Toi32, new WasmType[0]));
     opcodeExtendedMap.put((byte) 1, new InstructionType(Opcodes::temp, f32Toi32, new WasmType[0]));

@@ -22,6 +22,7 @@ public class ExecExpression {
     for (int i = 0; i < instructions.length; i++) {
       try {
         Opcodes.immediates = instructions[i].immediates;
+        Opcodes.currentTypeAnnotation = instructions[i].typeAnnotation;
         instructions[i].operation.operation.accept(stack);
         if (branchDepth != -1) {
           if (branchDepth == 0) {

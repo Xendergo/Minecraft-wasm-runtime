@@ -784,6 +784,7 @@ public class Parser {
 
         if (type.allowedAnnotations != null) {
           typeAnnotation = readTypeAnnotation(bytes, index, type.allowedAnnotations);
+          index += offset;
         }
 
         Value[] immediates = new Value[type.immediates.length];

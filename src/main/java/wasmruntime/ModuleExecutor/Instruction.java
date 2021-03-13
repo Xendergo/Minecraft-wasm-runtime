@@ -6,7 +6,7 @@ public class Instruction {
   public InstructionType operation;
   public Value[] immediates;
   public WasmType typeAnnotation;
-
+ 
   public Instruction(InstructionType operationOof, Value[] immediatesOof) {
     operation = operationOof;
     immediates = immediatesOof;
