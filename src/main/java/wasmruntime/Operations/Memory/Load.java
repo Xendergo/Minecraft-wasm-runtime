@@ -4,10 +4,7 @@ import wasmruntime.ModuleExecutor.ValueF32;
 import wasmruntime.ModuleExecutor.ValueF64;
 import wasmruntime.ModuleExecutor.ValueI32;
 import wasmruntime.ModuleExecutor.ValueI64;
-import wasmruntime.ModuleExecutor.ValueFuncref;
 import wasmruntime.Errors.TrapRuntime;
-import wasmruntime.ModuleExecutor.Value;
-import wasmruntime.ModuleExecutor.ValueExternref;
 import wasmruntime.ModuleExecutor.ValueStack;
 import static wasmruntime.ModuleData.Opcodes.*;
 
@@ -27,7 +24,7 @@ public class Load {
     ByteBuffer buf = stack.module.Memories.get(0).data;
     if (pos + 8 > buf.capacity()) throw new TrapRuntime("Can't read i64 outside the capacity of memory");
 
-    stack.push(new ValueI32(buf.getInt(pos)));
+    stack.push(new ValueI64(buf.getLong(pos)));
   }
 
   public static void loadF32(ValueStack stack) {
@@ -35,7 +32,7 @@ public class Load {
     ByteBuffer buf = stack.module.Memories.get(0).data;
     if (pos + 4 > buf.capacity()) throw new TrapRuntime("Can't read f32 outside the capacity of memory");
 
-    stack.push(new ValueI32(buf.getInt(pos)));
+    stack.push(new ValueF32(buf.getFloat(pos)));
   }
 
   public static void loadF64(ValueStack stack) {
@@ -43,7 +40,7 @@ public class Load {
     ByteBuffer buf = stack.module.Memories.get(0).data;
     if (pos + 8 > buf.capacity()) throw new TrapRuntime("Can't read f64 outside the capacity of memory");
 
-    stack.push(new ValueI32(buf.getInt(pos)));
+    stack.push(new ValueF64(buf.getDouble(pos)));
   }
 
   public static void loadI32_8u(ValueStack stack) {
