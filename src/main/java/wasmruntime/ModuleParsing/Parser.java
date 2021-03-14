@@ -436,7 +436,6 @@ public class Parser {
             int byteAmt = readInt(bytes, index);
             index += offset;
   
-            byte[] memory = module.Memories.get(memoryIndex).data;
             byte[] data = Arrays.copyOfRange(bytes, index, index + byteAmt);
             index += byteAmt;
 
@@ -445,9 +444,7 @@ public class Parser {
             }
   
             try {
-              for (int j = 0; j < byteAmt; j++) {
-                memory[j + memoryOffset] = data[j];
-              }
+              module.Memories.get(memoryIndex).data.put(data, memoryOffset, byteAmt);
             } catch (ArrayIndexOutOfBoundsException e) {
               throw new WasmParseError("Not enough memory to be able to store the data at index " + memoryOffset);
             }

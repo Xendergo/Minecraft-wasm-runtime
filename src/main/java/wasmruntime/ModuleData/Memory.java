@@ -1,13 +1,17 @@
 package wasmruntime.ModuleData;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
 public class Memory {
   public Limit limit;
-  public byte[] data;
+  public ByteBuffer data;
 
   public Memory(Limit limitOof) {
     limit = limitOof;
 
-    data = new byte[limit.min << 16];
+    data = ByteBuffer.wrap(new byte[limit.min << 16]);
+    data.order(ByteOrder.LITTLE_ENDIAN);
   }
 
   public boolean IsValid() {
@@ -16,9 +20,11 @@ public class Memory {
 
   public String toString() {
     String dataString = "";
-    for (int i = 0; i < data.length; i++) {
-      dataString += data[i] + ", ";
+    byte[] bytes = data.array();
+    for (int i = 0; i < bytes.length && i < 128; i++) {
+      dataString += bytes[i] + ", ";
     }
-    return "Memory {"+limit + ", pages: " + (data.length >>> 16) + ", data: [" + dataString + "]}";
+    dataString += "...";
+    return "Memory {" + limit + ", pages: " + (bytes.length >>> 16) + ", data: [" + dataString + "]}";
   }
 }

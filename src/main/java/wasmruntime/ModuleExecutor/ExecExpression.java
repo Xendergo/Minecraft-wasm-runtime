@@ -39,6 +39,8 @@ public class ExecExpression {
       }
     }
     
+    System.out.println(module.Memories.get(0));
+
     return stack;
   }
 }
