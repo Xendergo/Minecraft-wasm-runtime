@@ -19,6 +19,14 @@ public class Table {
     System.arraycopy(elem.data, 0, values, offset, elem.data.length);
   }
 
+  public void Initialize(Element elem, int offset, int length, int start) {
+    System.arraycopy(elem.data, start, values, offset, length);
+  }
+
+  public void Copy(Table table, int offset, int length, int start) {
+    System.arraycopy(table.values, start, values, offset, length);
+  }
+
   public boolean IsValid() {
     return limits.IsValid(2147483647);
   }

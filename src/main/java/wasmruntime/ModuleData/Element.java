@@ -5,7 +5,7 @@ import wasmruntime.ModuleData.HelpfulEnums.WasmType;
 import wasmruntime.ModuleExecutor.Value;
 
 public class Element {
-  Value[] data;
+  public Value[] data;
   WasmType type;
   ElementTypes usage;
 

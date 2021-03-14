@@ -154,6 +154,7 @@ public class Parser {
           WasmType type = WasmType.refMap.get(bytes[index]);
           index++;
           Limit limit = readLimit(bytes, index);
+          index += offset;
           module.Tables.add(new Table(limit, type));
         }
         break;
@@ -536,6 +537,7 @@ public class Parser {
 
     int min = readInt(bytes, start);
     start += offset;
+    offset = 0;
     int max = maxPresent ? readInt(bytes, start) : -1;
     offset = start - originalStart + offset;
 

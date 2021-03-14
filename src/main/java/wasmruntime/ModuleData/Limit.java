@@ -19,6 +19,10 @@ public class Limit {
     return min <= range;
   }
 
+  public boolean withinLimits(int value) {
+    return min <= value && (max >= value || max == -1);
+  }
+
   public String toString() {
     return min+" - "+max;
   }
