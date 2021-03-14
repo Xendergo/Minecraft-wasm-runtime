@@ -1,4 +1,4 @@
-package wasmruntime.Operations;
+package wasmruntime.Operations.Math;
 
 import wasmruntime.ModuleExecutor.ValueI32;
 import wasmruntime.ModuleExecutor.ValueI64;
