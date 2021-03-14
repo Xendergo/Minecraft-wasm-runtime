@@ -3,20 +3,24 @@ package wasmruntime.Operations.Math;
 import wasmruntime.ModuleExecutor.ValueStack;
 import static wasmruntime.ModuleData.Opcodes.*;
 
-public class Add {
+public class Subtract {
   public static void I32(ValueStack stack) {
-    stack.push(i32(stack) + i32(stack));
+    int b = i32(stack);
+    stack.push(i32(stack) - b);
   }
 
   public static void I64(ValueStack stack) {
-    stack.push(i64(stack) + i64(stack));
+    long b = i64(stack);
+    stack.push(i64(stack) - b);
   }
 
   public static void F32(ValueStack stack) {
-    stack.push(f32(stack) + f32(stack));
+    float b = f32(stack);
+    stack.push(f32(stack) - b);
   }
 
   public static void F64(ValueStack stack) {
-    stack.push(f64(stack) + f64(stack));
+    double b = f64(stack);
+    stack.push(f64(stack) - b);
   }
 }
