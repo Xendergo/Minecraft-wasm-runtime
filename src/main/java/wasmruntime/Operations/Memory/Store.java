@@ -1,13 +1,6 @@
 package wasmruntime.Operations.Memory;
 
-import wasmruntime.ModuleExecutor.ValueF32;
-import wasmruntime.ModuleExecutor.ValueF64;
-import wasmruntime.ModuleExecutor.ValueI32;
-import wasmruntime.ModuleExecutor.ValueI64;
-import wasmruntime.ModuleExecutor.ValueFuncref;
 import wasmruntime.Errors.TrapRuntime;
-import wasmruntime.ModuleExecutor.Value;
-import wasmruntime.ModuleExecutor.ValueExternref;
 import wasmruntime.ModuleExecutor.ValueStack;
 import static wasmruntime.ModuleData.Opcodes.*;
 
@@ -81,7 +74,7 @@ public class Store {
   public static void storeI64_32(ValueStack stack) {
     int pos = i32(stack) + i32(immediates[1]);
     ByteBuffer buf = stack.module.Memories.get(0).data;
-    if (pos + 4 > buf.capacity()) throw new TrapRuntime("Can't store short outside the capacity of memory");
+    if (pos + 4 > buf.capacity()) throw new TrapRuntime("Can't store int outside the capacity of memory");
 
     buf.putInt(pos, (int) i32(stack));
   }
