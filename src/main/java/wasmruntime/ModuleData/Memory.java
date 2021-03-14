@@ -10,7 +10,7 @@ public class Memory {
   public Memory(Limit limitOof) {
     limit = limitOof;
 
-    data = ByteBuffer.wrap(new byte[limit.min << 16]);
+    data = ByteBuffer.allocate(limit.min << 16);
     data.order(ByteOrder.LITTLE_ENDIAN);
   }
 

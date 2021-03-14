@@ -22,6 +22,7 @@ import wasmruntime.Operations.Reference;
 import wasmruntime.Operations.Remainder;
 import wasmruntime.Operations.Table;
 import wasmruntime.Operations.Memory.Load;
+import wasmruntime.Operations.Memory.MemoryManagement;
 import wasmruntime.Operations.Memory.Store;
 
 // Imports for operations (good for copy/paste)
@@ -133,8 +134,8 @@ public class Opcodes {
     opcodeMap.put((byte) 0x3c, new InstructionType(Store::storeI64_8, storei64, new WasmType[] {WasmType.i32, WasmType.i32}));
     opcodeMap.put((byte) 0x3d, new InstructionType(Store::storeI64_16, storei64, new WasmType[] {WasmType.i32, WasmType.i32}));
     opcodeMap.put((byte) 0x3e, new InstructionType(Store::storeI64_32, storei64, new WasmType[] {WasmType.i32, WasmType.i32}));
-    opcodeMap.put((byte) 0x3f, new InstructionType(Opcodes::temp, consti32, new WasmType[0]));
-    opcodeMap.put((byte) 0x40, new InstructionType(Opcodes::temp, i32Toi32, new WasmType[0]));
+    opcodeMap.put((byte) 0x3f, new InstructionType(MemoryManagement::size, consti32, new WasmType[] {WasmType.i32}));
+    opcodeMap.put((byte) 0x40, new InstructionType(MemoryManagement::grow, i32Toi32, new WasmType[] {WasmType.i32}));
     opcodeMap.put((byte) 0x41, new InstructionType(Const::ConstOperation, consti32, new WasmType[] {WasmType.i32}));
     opcodeMap.put((byte) 0x42, new InstructionType(Const::ConstOperation, consti64, new WasmType[] {WasmType.i64}));
     opcodeMap.put((byte) 0x43, new InstructionType(Const::ConstOperation, constf32, new WasmType[] {WasmType.f32}));

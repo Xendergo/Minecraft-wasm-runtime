@@ -12,7 +12,9 @@ public class Limit {
   public boolean IsValid(int range) {
     if (max > range) return false;
 
-    if (max != -1) {
+    if (max == -1) {
+      max = range;
+    } else {
       return min <= max;
     }
 
@@ -20,7 +22,7 @@ public class Limit {
   }
 
   public boolean withinLimits(int value) {
-    return min <= value && (max >= value || max == -1);
+    return min <= value && max >= value;
   }
 
   public String toString() {

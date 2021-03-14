@@ -39,6 +39,26 @@ public class ValueStack {
     stackPtr++;
   }
 
+  public void push(int v) {
+    stack[stackPtr] = new ValueI32(v);
+    stackPtr++;
+  }
+
+  public void push(long v) {
+    stack[stackPtr] = new ValueI64(v);
+    stackPtr++;
+  }
+
+  public void push(float v) {
+    stack[stackPtr] = new ValueF32(v);
+    stackPtr++;
+  }
+
+  public void push(double v) {
+    stack[stackPtr] = new ValueF64(v);
+    stackPtr++;
+  }
+
   public Value pop() {
     stackPtr--;
     return stack[stackPtr];
