@@ -42,6 +42,7 @@ import wasmruntime.Operations.Compare.gt;
 import wasmruntime.Operations.Compare.le;
 import wasmruntime.Operations.Compare.lt;
 import wasmruntime.Operations.Compare.ne;
+import wasmruntime.Operations.Conversions.wrap;
 import wasmruntime.Operations.Memory.Load;
 import wasmruntime.Operations.Memory.MemoryManagement;
 import wasmruntime.Operations.Memory.Store;
@@ -259,7 +260,7 @@ public class Opcodes {
     opcodeMap.put((byte) 0xa4, new InstructionType(MinMax::Min_F64, operatorf64, new WasmType[0]));
     opcodeMap.put((byte) 0xa5, new InstructionType(MinMax::Max_F64, operatorf64, new WasmType[0]));
     opcodeMap.put((byte) 0xa6, new InstructionType(copysign::F64, operatorf64, new WasmType[0]));
-    opcodeMap.put((byte) 0xa7, new InstructionType(Opcodes::temp, i64Toi32, new WasmType[0]));
+    opcodeMap.put((byte) 0xa7, new InstructionType(wrap::I32, i64Toi32, new WasmType[0]));
     opcodeMap.put((byte) 0xa8, new InstructionType(Opcodes::temp, f32Toi32, new WasmType[0]));
     opcodeMap.put((byte) 0xa9, new InstructionType(Opcodes::temp, f32Toi32, new WasmType[0]));
     opcodeMap.put((byte) 0xaa, new InstructionType(Opcodes::temp, f64Toi32, new WasmType[0]));
