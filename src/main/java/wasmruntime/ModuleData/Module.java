@@ -5,6 +5,11 @@ import java.util.HashMap;
 import java.util.List;
 
 import wasmruntime.Errors.WasmValidationError;
+import wasmruntime.ModuleExecutor.Value;
+import wasmruntime.ModuleExecutor.ValueF32;
+import wasmruntime.ModuleExecutor.ValueF64;
+import wasmruntime.ModuleExecutor.ValueI32;
+import wasmruntime.ModuleExecutor.ValueI64;
 
 public class Module {
   public static int WasmVersion = 1;
@@ -39,5 +44,27 @@ public class Module {
     for (int i = 0; i < Codes.size(); i++) {
       if (!Codes.get(i).IsValid(this)) throw new WasmValidationError("Code index " + i + " is invalid");
     }
+  }
+
+  public Value getGlobalSetting(String name, Value defaultValue) {
+    if (!exportedGlobals.containsKey(name)) return defaultValue;
+
+    return Globals.get(exportedGlobals.get("autoReload").index).getValue();
+  }
+
+  public Value getGlobalSetting(String name, int defaultValue) {
+    return getGlobalSetting(name, new ValueI32(defaultValue));
+  }
+
+  public Value getGlobalSetting(String name, long defaultValue) {
+    return getGlobalSetting(name, new ValueI64(defaultValue));
+  }
+
+  public Value getGlobalSetting(String name, float defaultValue) {
+    return getGlobalSetting(name, new ValueF32(defaultValue));
+  }
+
+  public Value getGlobalSetting(String name, double defaultValue) {
+    return getGlobalSetting(name, new ValueF64(defaultValue));
   }
 }
