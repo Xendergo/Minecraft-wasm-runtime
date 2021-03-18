@@ -42,6 +42,7 @@ import wasmruntime.Operations.Compare.gt;
 import wasmruntime.Operations.Compare.le;
 import wasmruntime.Operations.Compare.lt;
 import wasmruntime.Operations.Compare.ne;
+import wasmruntime.Operations.Conversions.Extend;
 import wasmruntime.Operations.Conversions.Trunc;
 import wasmruntime.Operations.Conversions.wrap;
 import wasmruntime.Operations.Memory.Load;
@@ -266,8 +267,8 @@ public class Opcodes {
     opcodeMap.put((byte) 0xa9, new InstructionType(Trunc::f32_i32_u, f32Toi32, new WasmType[0]));
     opcodeMap.put((byte) 0xaa, new InstructionType(Trunc::f64_i32_s, f64Toi32, new WasmType[0]));
     opcodeMap.put((byte) 0xab, new InstructionType(Trunc::f64_i32_u, f64Toi32, new WasmType[0]));
-    opcodeMap.put((byte) 0xac, new InstructionType(Opcodes::temp, i32Toi64, new WasmType[0]));
-    opcodeMap.put((byte) 0xad, new InstructionType(Opcodes::temp, i32Toi64, new WasmType[0]));
+    opcodeMap.put((byte) 0xac, new InstructionType(Extend::I32_s, i32Toi64, new WasmType[0]));
+    opcodeMap.put((byte) 0xad, new InstructionType(Extend::I32_u, i32Toi64, new WasmType[0]));
     opcodeMap.put((byte) 0xae, new InstructionType(Trunc::f32_i64_s, f32Toi64, new WasmType[0]));
     opcodeMap.put((byte) 0xaf, new InstructionType(Trunc::f32_i64_u, f32Toi64, new WasmType[0]));
     opcodeMap.put((byte) 0xb0, new InstructionType(Trunc::f64_i64_s, f64Toi64, new WasmType[0]));
@@ -286,11 +287,11 @@ public class Opcodes {
     opcodeMap.put((byte) 0xbd, new InstructionType(Opcodes::temp, f64Toi64, new WasmType[0]));
     opcodeMap.put((byte) 0xbe, new InstructionType(Opcodes::temp, i32Tof32, new WasmType[0]));
     opcodeMap.put((byte) 0xbf, new InstructionType(Opcodes::temp, i64Tof64, new WasmType[0]));
-    opcodeMap.put((byte) 0xc0, new InstructionType(Opcodes::temp, i32Toi32, new WasmType[0]));
-    opcodeMap.put((byte) 0xc1, new InstructionType(Opcodes::temp, i32Toi32, new WasmType[0]));
-    opcodeMap.put((byte) 0xc2, new InstructionType(Opcodes::temp, i64Toi64, new WasmType[0]));
-    opcodeMap.put((byte) 0xc3, new InstructionType(Opcodes::temp, i64Toi64, new WasmType[0]));
-    opcodeMap.put((byte) 0xc4, new InstructionType(Opcodes::temp, i64Toi64, new WasmType[0]));
+    opcodeMap.put((byte) 0xc0, new InstructionType(Extend::I32_8, i32Toi32, new WasmType[0]));
+    opcodeMap.put((byte) 0xc1, new InstructionType(Extend::I32_16, i32Toi32, new WasmType[0]));
+    opcodeMap.put((byte) 0xc2, new InstructionType(Extend::I64_8, i64Toi64, new WasmType[0]));
+    opcodeMap.put((byte) 0xc3, new InstructionType(Extend::I64_16, i64Toi64, new WasmType[0]));
+    opcodeMap.put((byte) 0xc4, new InstructionType(Extend::I64_32, i64Toi64, new WasmType[0]));
     opcodeMap.put((byte) 0xd0, new InstructionType(Reference::nullRef, get, new WasmType[0], WasmType.reftype, GenericTypeRequirers.annotated));
     opcodeMap.put((byte) 0xd1, new InstructionType(Reference::isNull, genericToI32, new WasmType[0]));
     opcodeMap.put((byte) 0xd2, new InstructionType(Reference::func, getFuncref, new WasmType[] {WasmType.i32}));
@@ -303,6 +304,12 @@ public class Opcodes {
     opcodeExtendedMap.put((byte) 0x05, new InstructionType(Opcodes::temp, f32Toi64, new WasmType[0]));
     opcodeExtendedMap.put((byte) 0x06, new InstructionType(Opcodes::temp, f64Toi64, new WasmType[0]));
     opcodeExtendedMap.put((byte) 0x07, new InstructionType(Opcodes::temp, f64Toi64, new WasmType[0]));
+
+    opcodeExtendedMap.put((byte) 0x08, new InstructionType(Opcodes::temp, threeI32, new WasmType[] {WasmType.i32}));
+    opcodeExtendedMap.put((byte) 0x09, new InstructionType(Opcodes::temp, nop, new WasmType[] {WasmType.i32}));
+    opcodeExtendedMap.put((byte) 0x0a, new InstructionType(Opcodes::temp, threeI32, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 0x0b, new InstructionType(Opcodes::temp, threeI32, new WasmType[0]));
+
     opcodeExtendedMap.put((byte) 0x0c, new InstructionType(Table::init, threeI32, new WasmType[] {WasmType.i32, WasmType.i32}));
     opcodeExtendedMap.put((byte) 0x0d, new InstructionType(Table::dropElem, nop, new WasmType[] {WasmType.i32}));
     opcodeExtendedMap.put((byte) 0x0e, new InstructionType(Table::copy, threeI32, new WasmType[] {WasmType.i32, WasmType.i32}));
