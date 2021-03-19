@@ -5,16 +5,16 @@ import static wasmruntime.ModuleData.Opcodes.*;
 
 public class Rounding {
   public static void ceil_f32(ValueStack stack) {
-    stack.push(Math.ceil(f32(stack)));
+    stack.push((float)(Math.ceil(f32(stack))));
   }
 
   public static void floor_f32(ValueStack stack) {
-    stack.push(Math.floor(f32(stack)));
+    stack.push((float)(Math.floor(f32(stack))));
   }
 
   public static void trunc_f32(ValueStack stack) {
     Float v = f32(stack);
-    stack.push(Math.signum(v) * Math.floor(Math.abs(v)));
+    stack.push((float)(Math.signum(v) * Math.floor(Math.abs(v))));
   }
 
   // idk why it uses such a weird rounding method   https://github.com/sunfishcode/wasm-reference-manual/blob/master/WebAssembly.md#floating-point-round-to-nearest-integer

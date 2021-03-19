@@ -46,6 +46,7 @@ import wasmruntime.Operations.Conversions.Convert;
 import wasmruntime.Operations.Conversions.Extend;
 import wasmruntime.Operations.Conversions.PromoteDemote;
 import wasmruntime.Operations.Conversions.Trunc;
+import wasmruntime.Operations.Conversions.TruncSat;
 import wasmruntime.Operations.Conversions.reinterpret;
 import wasmruntime.Operations.Conversions.wrap;
 import wasmruntime.Operations.Memory.Load;
@@ -308,14 +309,14 @@ public class Opcodes {
     opcodeMap.put((byte) 0xd2, new InstructionType(Reference::func, getFuncref, new WasmType[] {WasmType.i32}));
 
 
-    opcodeExtendedMap.put((byte) 0x00, new InstructionType(Opcodes::temp, f32Toi32, new WasmType[0]));
-    opcodeExtendedMap.put((byte) 0x01, new InstructionType(Opcodes::temp, f32Toi32, new WasmType[0]));
-    opcodeExtendedMap.put((byte) 0x02, new InstructionType(Opcodes::temp, f64Toi32, new WasmType[0]));
-    opcodeExtendedMap.put((byte) 0x03, new InstructionType(Opcodes::temp, f64Toi32, new WasmType[0]));
-    opcodeExtendedMap.put((byte) 0x04, new InstructionType(Opcodes::temp, f32Toi64, new WasmType[0]));
-    opcodeExtendedMap.put((byte) 0x05, new InstructionType(Opcodes::temp, f32Toi64, new WasmType[0]));
-    opcodeExtendedMap.put((byte) 0x06, new InstructionType(Opcodes::temp, f64Toi64, new WasmType[0]));
-    opcodeExtendedMap.put((byte) 0x07, new InstructionType(Opcodes::temp, f64Toi64, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 0x00, new InstructionType(TruncSat::f32_i32_s, f32Toi32, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 0x01, new InstructionType(TruncSat::f32_i32_u, f32Toi32, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 0x02, new InstructionType(TruncSat::f64_i32_s, f64Toi32, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 0x03, new InstructionType(TruncSat::f64_i32_u, f64Toi32, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 0x04, new InstructionType(TruncSat::f32_i64_s, f32Toi64, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 0x05, new InstructionType(TruncSat::f32_i64_u, f32Toi64, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 0x06, new InstructionType(TruncSat::f64_i64_s, f64Toi64, new WasmType[0]));
+    opcodeExtendedMap.put((byte) 0x07, new InstructionType(TruncSat::f64_i64_u, f64Toi64, new WasmType[0]));
 
     opcodeExtendedMap.put((byte) 0x08, new InstructionType(Opcodes::temp, threeI32, new WasmType[] {WasmType.i32}));
     opcodeExtendedMap.put((byte) 0x09, new InstructionType(Opcodes::temp, nop, new WasmType[] {WasmType.i32}));

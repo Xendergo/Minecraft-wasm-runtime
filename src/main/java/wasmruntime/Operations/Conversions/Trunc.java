@@ -9,62 +9,52 @@ import com.google.common.primitives.UnsignedInts;
 import com.google.common.primitives.UnsignedLong;
 import com.ibm.icu.math.BigDecimal;
 
-import wasmruntime.Errors.TrapRuntime;
-
 public class Trunc {
   public static void f32_i32_s(ValueStack stack) {
     Rounding.trunc_f32(stack);
-    float v = f32(stack);
-    if (v < Integer.MIN_VALUE || v > Integer.MAX_VALUE) throw new TrapRuntime("Can't convert " + v + " to an integer");
-    stack.push((int) v);
+    stack.push((int) f32(stack));
   }
 
   public static void f32_i32_u(ValueStack stack) {
     Rounding.trunc_f32(stack);
-    float v = f32(stack);
-    if (v < 0 || v > 4294967296L) throw new TrapRuntime("Can't convert " + v + " to an unsigned integer");
-    stack.push(UnsignedInts.saturatedCast((long) v));
+    stack.push(UnsignedInts.saturatedCast((long) f32(stack)));
   }
 
   public static void f64_i32_s(ValueStack stack) {
     Rounding.trunc_f64(stack);
-    double v = f64(stack);
-    if (v < Integer.MIN_VALUE || v > Integer.MAX_VALUE) throw new TrapRuntime("Can't convert " + v + " to an integer");
-    stack.push((int) v);
+    stack.push((int) f64(stack));
   }
 
   public static void f64_i32_u(ValueStack stack) {
     Rounding.trunc_f64(stack);
-    double v = f64(stack);
-    if (v < 0 || v > 4294967296L) throw new TrapRuntime("Can't convert " + v + " to an unsigned integer");
-    stack.push(UnsignedInts.saturatedCast((long) v));
+    stack.push(UnsignedInts.saturatedCast((long) f64(stack)));
   }
 
   public static void f32_i64_s(ValueStack stack) {
     Rounding.trunc_f32(stack);
-    float v = f32(stack);
-    if (v < Long.MIN_VALUE || v > Long.MAX_VALUE) throw new TrapRuntime("Can't convert " + v + " to an integer");
-    stack.push((long) v);
+    stack.push((long) f32(stack));
   }
 
   public static void f32_i64_u(ValueStack stack) {
     Rounding.trunc_f32(stack);
-    float f = f32(stack);
-    if (f < 0 || f > 18446744073709552000D) throw new TrapRuntime("Can't convert " + f + " to an unsigned integer");
-    stack.push(UnsignedLong.valueOf(new BigDecimal(f).toBigInteger()).longValue());
+    try {
+      stack.push(UnsignedLong.valueOf(new BigDecimal(f32(stack)).toBigInteger()).longValue());
+    } catch (Exception e) {
+      stack.push(0L);
+    }
   }
 
   public static void f64_i64_s(ValueStack stack) {
     Rounding.trunc_f64(stack);
-    double v = f64(stack);
-    if (v < Long.MIN_VALUE || v > Long.MAX_VALUE) throw new TrapRuntime("Can't convert " + v + " to an integer");
-    stack.push((long) v);
+    stack.push((long) f64(stack));
   }
 
   public static void f64_i64_u(ValueStack stack) {
     Rounding.trunc_f64(stack);
-    double f = f64(stack);
-    if (f < 0 || f > 18446744073709552000D) throw new TrapRuntime("Can't convert " + f + " to an unsigned integer");
-    stack.push(UnsignedLong.valueOf(new BigDecimal(f).toBigInteger()).longValue());
+    try {
+      stack.push(UnsignedLong.valueOf(new BigDecimal(f64(stack)).toBigInteger()).longValue());
+    } catch (Exception e) {
+      stack.push(0L);
+    }
   }
 }
