@@ -3,7 +3,7 @@ use jni::objects::{JClass, JString};
 use jni::sys::jstring;
 
 #[no_mangle]
-pub extern "system" fn Java_ModuleWrapper_yee(env: JNIEnv,
+pub extern "system" fn Java_wasmruntime_ModuleWrapper_yee(env: JNIEnv,
                                               class: JClass,
                                               input: JString)
                                             -> jstring {
@@ -13,7 +13,7 @@ pub extern "system" fn Java_ModuleWrapper_yee(env: JNIEnv,
 
   // Then we have to create a new Java string to return. Again, more info
   // in the `strings` module.
-  let output = env.new_string(format!("Hello, {}!", input))
+  let output = env.new_string(format!("poggo, {}!", input))
       .expect("Couldn't create java string!");
 
   // Finally, extract the raw pointer to return.

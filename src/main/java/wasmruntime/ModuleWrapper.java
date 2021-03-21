@@ -25,7 +25,7 @@ public class ModuleWrapper {
 
   public ModuleWrapper(FileObject file, String name) throws FileSystemException, IOException {
     moduleName = name;
-    yee("yoy");
+    System.out.println(yee("yoy"));
   }
 
   private static native String yee(String str);
