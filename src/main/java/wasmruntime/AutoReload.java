@@ -6,10 +6,6 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.vfs2.FileChangeEvent;
 import org.apache.commons.vfs2.FileListener;
 
-import wasmruntime.Errors.WasmParseError;
-import wasmruntime.Errors.WasmValidationError;
-import wasmruntime.ModuleData.Module;
-
 public class AutoReload implements FileListener {
 
   // It doesn't matter if a file gets deleted
@@ -23,16 +19,16 @@ public class AutoReload implements FileListener {
     tryReload(event);
   }
 
-  private void tryReload(FileChangeEvent event) throws IOException, WasmParseError, WasmValidationError {
+  private void tryReload(FileChangeEvent event) throws IOException {
     String moduleName = FilenameUtils.getBaseName(event.getFileObject().getName().getBaseName());
     
     System.out.println("Yee");
 
     if (!Modules.modules.containsKey(moduleName)) return;
-    Module module = Modules.modules.get(moduleName);
+    ModuleWrapper module = Modules.modules.get(moduleName);
 
-    if (module.getGlobalSetting("autoReload", 0).equals(1)) {
-      Modules.LoadModule(event.getFileObject());
-    }
+    // if (module.getFunc("autoReload").call()[0].i32() == 1) {
+    //   Modules.LoadModule(event.getFileObject());
+    // }
   }
 }

@@ -7,25 +7,14 @@ import java.util.Map;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.vfs2.FileObject;
 
-import wasmruntime.Errors.WasmParseError;
-import wasmruntime.Errors.WasmValidationError;
-import wasmruntime.ModuleParsing.Parser;
-import wasmruntime.ModuleData.Module;
-
 public class Modules {
-  public static Map<String, Module> modules = new HashMap<String, Module>();
-  public static void LoadModule(FileObject path) throws IOException, WasmParseError, WasmValidationError {
+  public static Map<String, ModuleWrapper> modules = new HashMap<String, ModuleWrapper>();
+  public static void LoadModule(FileObject path) throws IOException {
     String name = FilenameUtils.getBaseName(path.getName().getBaseName());
 
     UnloadModule(name);
 
-    byte[] bytes = path.getContent().getByteArray();
-
-    Module module = Parser.parseModule(bytes);
-
-    module.IsValid();
-
-    modules.put(name, module);
+    modules.put(name, new ModuleWrapper(path, name));
   }
 
   public static void UnloadModule(String name) {

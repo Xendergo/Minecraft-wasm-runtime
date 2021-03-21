@@ -10,69 +10,63 @@ import org.apache.commons.lang3.StringUtils;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.TranslatableText;
+import wasmruntime.ModuleWrapper;
 import wasmruntime.Modules;
-import wasmruntime.Errors.Trap;
-import wasmruntime.ModuleData.Module;
-import wasmruntime.ModuleData.WasmFunctionInterface;
-import wasmruntime.ModuleExecutor.Value;
-import wasmruntime.ModuleExecutor.ValueF32;
-import wasmruntime.ModuleExecutor.ValueF64;
-import wasmruntime.ModuleExecutor.ValueI32;
-import wasmruntime.ModuleExecutor.ValueI64;
-import wasmruntime.ModuleExecutor.ValueStack;
 import wasmruntime.Utils.Message;
 
 public class Invoke {
   public static int run(CommandContext<ServerCommandSource> ctx, String moduleName, String functionName, String arguments) throws CommandSyntaxException {
     if (!Modules.modules.containsKey(moduleName)) throw new SimpleCommandExceptionType(new TranslatableText("wasm.commands.error.no_such_module", moduleName)).create();
-    Module module = Modules.modules.get(moduleName);
+    ModuleWrapper module = Modules.modules.get(moduleName);
 
-    if (!module.exportedFunctions.containsKey(functionName)) throw new SimpleCommandExceptionType(new TranslatableText("wasm.commands.error.no_such_function", functionName)).create();
-    WasmFunctionInterface func = module.Functions.get(module.exportedFunctions.get(functionName).index);
+    // if (!module..containsKey(functionName)) throw new SimpleCommandExceptionType(new TranslatableText("wasm.commands.error.no_such_function", functionName)).create();
+    // WasmFunctionInterface func = module.Functions.get(module.exportedFunctions.get(functionName).index);
 
-    String[] argsStrings = StringUtils.split(arguments, " ");
-    if (argsStrings.length != func.type.inputs.length) throw new SimpleCommandExceptionType(new TranslatableText("wasm.commands.error.incorrect_arg_amt", func.type.inputs.length)).create();
+    // String[] argsStrings = StringUtils.split(arguments, " ");
+    // if (argsStrings.length != func.type.inputs.length) throw new SimpleCommandExceptionType(new TranslatableText("wasm.commands.error.incorrect_arg_amt", func.type.inputs.length)).create();
     
-    Value[] stack = new Value[argsStrings.length];
+    // Value[] stack = new Value[argsStrings.length];
 
-    for (int i = 0; i < argsStrings.length; i++) {
-      try {
-        switch (func.type.inputs[i]) {
-          case i32:
-          stack[i] = new ValueI32(Integer.parseInt(argsStrings[i]));
-          break;
+    // for (int i = 0; i < argsStrings.length; i++) {
+    //   try {
+    //     switch (func.type.inputs[i]) {
+    //       case i32:
+    //       stack[i] = new ValueI32(Integer.parseInt(argsStrings[i]));
+    //       break;
   
-          case i64:
-          stack[i] = new ValueI64(Long.parseLong(argsStrings[i]));
-          break;
+    //       case i64:
+    //       stack[i] = new ValueI64(Long.parseLong(argsStrings[i]));
+    //       break;
   
-          case f32:
-          stack[i] = new ValueF32(Float.parseFloat(argsStrings[i]));
-          break;
+    //       case f32:
+    //       stack[i] = new ValueF32(Float.parseFloat(argsStrings[i]));
+    //       break;
   
-          case f64:
-          stack[i] = new ValueF64(Double.parseDouble(argsStrings[i]));
-          break;
+    //       case f64:
+    //       stack[i] = new ValueF64(Double.parseDouble(argsStrings[i]));
+    //       break;
   
-          default:
-          throw new Exception("");
-        }
-      } catch (Exception e) {
-        throw new SimpleCommandExceptionType(new TranslatableText("wasm.commands.error.incorrect_argument", argsStrings[i], func.type.inputs[i])).create();
-      }
-    }
+    //       default:
+    //       throw new Exception("");
+    //     }
+    //   } catch (Exception e) {
+    //     throw new SimpleCommandExceptionType(new TranslatableText("wasm.commands.error.incorrect_argument", argsStrings[i], func.type.inputs[i])).create();
+    //   }
+    // }
 
-    ValueStack output;
-    try {
-		  output = func.Exec(stack, module);
-    } catch (Trap e) {
-      throw new SimpleCommandExceptionType(new LiteralText(e.getMessage())).create();
-    } catch (Exception e) {
-      e.printStackTrace();
-      return 0;
-    }
+    // ValueStack output;
+    // try {
+		//   output = func.Exec(stack, module);
+    // } catch (Trap e) {
+    //   throw new SimpleCommandExceptionType(new LiteralText(e.getMessage())).create();
+    // } catch (Exception e) {
+    //   e.printStackTrace();
+    //   return 0;
+    // }
 
-    Message.broadcast(new TranslatableText("wasm.commands.invoke.return", output.displayString()), ctx.getSource().getMinecraftServer());
+    // Val[] values = module.module.getFunc("thingy").get().call(Val.fromI32(10));
+
+    // Message.broadcast(new TranslatableText("wasm.commands.invoke.return", values[0].i32()), ctx.getSource().getMinecraftServer());
 
     return Command.SINGLE_SUCCESS;
   }

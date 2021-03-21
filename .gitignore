@@ -31,3 +31,6 @@ bin/
 # fabric
 
 run/
+
+src/main/resources/Wasmtime-embedding/target
+src/main/resources/Wasmtime-embedding/Cargo.lock

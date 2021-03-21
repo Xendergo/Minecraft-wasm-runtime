@@ -23,8 +23,6 @@ import wasmruntime.Commands.Load;
 import wasmruntime.Commands.Suggestions.ExportedFunctions;
 import wasmruntime.Commands.Suggestions.LoadableModules;
 import wasmruntime.Commands.Suggestions.LoadedModules;
-import wasmruntime.Errors.WasmParseError;
-import wasmruntime.Errors.WasmValidationError;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.WorldSavePath;
 
@@ -36,6 +34,8 @@ public class WasmRuntime implements ModInitializer {
 	public static FileSystemManager fsManager;
 	@Override
 	public void onInitialize() {
+		// System.setProperty("java.library.path", "Wasmtime-embedding/target/debug");
+
 		try {
 			fsManager = VFS.getManager();
 		} catch (Exception e2) {
@@ -79,15 +79,12 @@ public class WasmRuntime implements ModInitializer {
 					}
 
 					for (String modulePath : modulesPaths) {
+						FileObject module;
 						try {
-							FileObject module = fsManager.resolveFile(configFolder, modulePath + ".wasm");
+							module = fsManager.resolveFile(configFolder, modulePath + ".wasm");
 							Modules.LoadModule(module);
 						} catch (IOException e) {
-							System.out.printf("Error reading file %s\n", modulePath);
-						} catch (WasmParseError e) {
-							System.out.printf("Error parsing file %s: %s\n", modulePath, e.toString());
-						} catch (WasmValidationError e) {
-							System.out.printf("Error validating file %s: %s\n", modulePath, e.toString());
+							e.printStackTrace();
 						}
 					}
 

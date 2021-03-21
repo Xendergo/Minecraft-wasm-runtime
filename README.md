@@ -16,3 +16,6 @@ Spawning items
 Creating loot tables to spawn items from (good for those videos that are like "manhunt but thingy drops op loot")
 Some sort of equivalent to Javascript's `e.preventDefault()`
 Manipulating nbt is definitely a must have
+
+## How to use
+idk yet this mod doesn't work rn
