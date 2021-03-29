@@ -8,8 +8,8 @@ https://github.com/kawamuray/wasmtime-java
 mod errors;
 mod interop;
 use jni::{self, JNIEnv};
-use jni::objects::{JClass, JString, JObject};
-use jni::sys::{jlong, jstring, jobject};
+use jni::objects::{JClass, JString, JObject, JMap, JList, JValue};
+use jni::sys::{jlong, jobject};
 use wasmtime::*;
 use wasmtime_wasi::Wasi;
 use wasi_cap_std_sync::WasiCtxBuilder;
@@ -111,51 +111,51 @@ pub fn UnloadModule(env: JNIEnv, class: JClass) -> Result<()> {
   Ok(())
 }
 
-pub fn Functions(env: JNIEnv, class: JClass, InstancePtr: jlong) -> Result<jstring> {
+pub fn Functions(env: JNIEnv, class: JClass, InstancePtr: jlong) -> Result<jobject> {
   let Instance = &*ref_from_raw::<Instance>(InstancePtr)?;
   let exports = Instance::exports(Instance);
 
-  let mut ret = String::default();
+  let byteClass = env.find_class("java/lang/Byte")?;
+  let mapClass = env.find_class("java/util/HashMap")?;
+  let listClass = env.find_class("java/util/ArrayList")?;
+
+  let ret = JMap::from_env(&env, env.new_object(mapClass, "()V", &[])?)?;
   
   for func in exports {
     match func.ty() {
       ExternType::Func(v) => {
-        ret += func.name();
+        let toAdd = JList::from_env(&env, env.new_object(listClass, "()V", &[])?)?;
         
-        ret += "|";
-
         for param in v.params() {
-          ret += match param {
-            ValType::I32 => "0 ",
-            ValType::I64 => "1 ",
-            ValType::F32 => "2 ",
-            ValType::F64 => "3 ",
-            ValType::V128 => "4 ",
-            ValType::ExternRef => "5 ",
-            ValType::FuncRef => "6 "
-          };
+          toAdd.add(env.new_object(byteClass, "(B)V", &[JValue::Byte(match param {
+            ValType::I32 => 0,
+            ValType::I64 => 1,
+            ValType::F32 => 2,
+            ValType::F64 => 3,
+            ValType::V128 => 4,
+            ValType::ExternRef => 5,
+            ValType::FuncRef => 6
+          })])?)?;
         }
-
-        ret += "|";
 
         for result in v.results() {
-          ret += match result {
-            ValType::I32 => "0 ",
-            ValType::I64 => "1 ",
-            ValType::F32 => "2 ",
-            ValType::F64 => "3 ",
-            ValType::V128 => "4 ",
-            ValType::ExternRef => "5 ",
-            ValType::FuncRef => "6 "
-          }
+          toAdd.add(env.new_object(byteClass, "(B)V", &[JValue::Byte(match result {
+            ValType::I32 => -128,
+            ValType::I64 => -127,
+            ValType::F32 => -126,
+            ValType::F64 => -125,
+            ValType::V128 => -124,
+            ValType::ExternRef => -123,
+            ValType::FuncRef => -122
+          })])?)?;
         }
 
-        ret += ",";
+        ret.put(*env.new_string(func.name())?, *toAdd)?;
       }
 
       _ => {}
     }
   }
 
-  Ok(env.new_string(ret)?.into_inner())
+  Ok(ret.into_inner())
 }

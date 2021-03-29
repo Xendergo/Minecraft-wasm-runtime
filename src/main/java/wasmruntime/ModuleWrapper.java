@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
@@ -45,5 +47,5 @@ public class ModuleWrapper implements AutoCloseable {
 
   private static native void UnloadModule() throws WasmtimeException;
 
-  private static native String Functions(long InstancePtr) throws WasmtimeException;
+  private static native Map<String, List<Byte>> Functions(long InstancePtr) throws WasmtimeException;
 }
