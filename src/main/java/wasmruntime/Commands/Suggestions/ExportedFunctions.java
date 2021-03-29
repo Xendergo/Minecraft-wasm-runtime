@@ -15,7 +15,7 @@ import wasmruntime.Modules;
 public class ExportedFunctions implements SuggestionProvider<ServerCommandSource> {
 	@Override
 	public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder) throws CommandSyntaxException {
-    // Modules.modules.get(getString(context, "Module")).exportedFunctions.keySet().forEach(name -> builder.suggest(name));
+    Modules.modules.get(getString(context, "Module")).exportedFunctions.keySet().forEach(name -> builder.suggest(name));
 
 		return builder.buildFuture();
 	}

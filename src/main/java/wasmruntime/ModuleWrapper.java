@@ -5,18 +5,22 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 
 import wasmruntime.Exceptions.WasmtimeException;
 
-public class ModuleWrapper implements AutoCloseable {
+public class ModuleWrapper {
   public String moduleName;
 
   private long InstanceID;
+
+  public Map<String, FuncType> exportedFunctions = new HashMap<String, FuncType>();
 
   static {
     try {
@@ -34,10 +38,15 @@ public class ModuleWrapper implements AutoCloseable {
   public ModuleWrapper(FileObject file, String name) throws FileSystemException, IOException, WasmtimeException {
     moduleName = name;
     InstanceID = LoadModule(file.getPath().toAbsolutePath().toString());
-    System.out.println(Functions(InstanceID));
+    
+    for (Entry<String,List<Byte>> entry : Functions(InstanceID).entrySet()) {
+      exportedFunctions.put(entry.getKey(), new FuncType(entry.getValue()));
+    }
+
+    System.out.println(exportedFunctions);
   }
   
-  public void close() throws Exception {
+  public void close() {
     UnloadModule();
   }
 
@@ -45,7 +54,7 @@ public class ModuleWrapper implements AutoCloseable {
 
   private static native void Init() throws WasmtimeException;
 
-  private static native void UnloadModule() throws WasmtimeException;
+  private static native void UnloadModule();
 
   private static native Map<String, List<Byte>> Functions(long InstancePtr) throws WasmtimeException;
 }

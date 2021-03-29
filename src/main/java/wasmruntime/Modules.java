@@ -20,6 +20,10 @@ public class Modules {
   }
 
   public static void UnloadModule(String name) {
+    if (modules.containsKey(name)) {
+      modules.get(name).close();
+    }
+
     modules.remove(name);
   }
 }
