@@ -23,6 +23,7 @@ import wasmruntime.Commands.Load;
 import wasmruntime.Commands.Suggestions.ExportedFunctions;
 import wasmruntime.Commands.Suggestions.LoadableModules;
 import wasmruntime.Commands.Suggestions.LoadedModules;
+import wasmruntime.Exceptions.WasmtimeException;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.WorldSavePath;
 
@@ -84,6 +85,8 @@ public class WasmRuntime implements ModInitializer {
 							module = fsManager.resolveFile(configFolder, modulePath + ".wasm");
 							Modules.LoadModule(module);
 						} catch (IOException e) {
+							e.printStackTrace();
+						} catch (WasmtimeException e) {
 							e.printStackTrace();
 						}
 					}

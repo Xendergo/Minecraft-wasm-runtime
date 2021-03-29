@@ -9,24 +9,41 @@ import java.nio.file.Paths;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 
-public class ModuleWrapper {
+import wasmruntime.Exceptions.WasmtimeException;
+
+public class ModuleWrapper implements AutoCloseable {
   public String moduleName;
 
+  private long InstanceID;
+
   static {
-    // System.out.println(System.getProperty("java.library.path"));
     try {
       URL res = ModuleWrapper.class.getClassLoader().getResource("Wasmtime-embedding/target/debug/Wasmtime_embedding.dll");
       File file = Paths.get(res.toURI()).toFile();
       System.load(file.getAbsolutePath());
+      Init();
     } catch (URISyntaxException e) {
+      throw new RuntimeException(e);
+    } catch (WasmtimeException e) {
       throw new RuntimeException(e);
     }
   }
 
-  public ModuleWrapper(FileObject file, String name) throws FileSystemException, IOException {
+  public ModuleWrapper(FileObject file, String name) throws FileSystemException, IOException, WasmtimeException {
     moduleName = name;
-    System.out.println(yee("yoy"));
+    InstanceID = LoadModule(file.getPath().toAbsolutePath().toString());
+    System.out.println(Functions(InstanceID));
+  }
+  
+  public void close() throws Exception {
+    UnloadModule();
   }
 
-  private static native String yee(String str);
+  private static native long LoadModule(String path) throws WasmtimeException;
+
+  private static native void Init() throws WasmtimeException;
+
+  private static native void UnloadModule() throws WasmtimeException;
+
+  private static native String Functions(long InstancePtr) throws WasmtimeException;
 }
