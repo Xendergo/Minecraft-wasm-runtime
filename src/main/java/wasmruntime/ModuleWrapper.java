@@ -14,6 +14,8 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 
 import wasmruntime.Exceptions.WasmtimeException;
+import wasmruntime.Types.FuncType;
+import wasmruntime.Types.Value;
 
 public class ModuleWrapper {
   public String moduleName;
@@ -45,6 +47,10 @@ public class ModuleWrapper {
 
     System.out.println(exportedFunctions);
   }
+
+  public List<Value<?>> CallFunction(String name, List<Value<?>> params) throws WasmtimeException {
+    return CallFunction(InstanceID, name, params);
+  }
   
   public void close() {
     UnloadModule();
@@ -57,4 +63,6 @@ public class ModuleWrapper {
   private static native void UnloadModule();
 
   private static native Map<String, List<Byte>> Functions(long InstancePtr) throws WasmtimeException;
+
+  private static native List<Value<?>> CallFunction(long InstancePtr, String name, List<Value<?>> params) throws WasmtimeException;
 }

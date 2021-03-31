@@ -1,4 +1,4 @@
-package wasmruntime;
+package wasmruntime.Types;
 
 import java.util.ArrayList;
 import java.util.List;

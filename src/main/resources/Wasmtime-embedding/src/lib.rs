@@ -15,6 +15,7 @@ use wasmtime_wasi::Wasi;
 use wasi_cap_std_sync::WasiCtxBuilder;
 use crate::errors::{Result};
 use crate::interop::*;
+use std::iter::FromIterator;
 
 static mut StorePtr: i64 = 0;
 
@@ -48,10 +49,10 @@ pub extern "system" fn Java_wasmruntime_ModuleWrapper_Init(env: JNIEnv, class: J
 }
 
 #[no_mangle]
-pub extern "system" fn Java_wasmruntime_ModuleWrapper_LoadModule(env: JNIEnv, class: JClass, path: JString, name: JString) -> jlong {
+pub extern "system" fn Java_wasmruntime_ModuleWrapper_LoadModule(env: JNIEnv, class: JClass, path: JString) -> jlong {
   wrap_error!(
     env,
-    LoadModule(env, class, path, name),
+    LoadModule(env, class, path),
     Default::default()
   )
 }
@@ -70,6 +71,15 @@ pub extern "system" fn Java_wasmruntime_ModuleWrapper_Functions(env: JNIEnv, cla
   wrap_error!(
     env,
     Functions(env, class, InstancePtr),
+    JObject::null().into_inner()
+  )
+}
+
+#[no_mangle]
+pub extern "system" fn Java_wasmruntime_ModuleWrapper_CallFunction(env: JNIEnv, class: JClass, InstancePtr: jlong, str: JString, args: JObject) -> jobject {
+  wrap_error!(
+    env,
+    CallFunction(env, class, InstancePtr, str, args),
     JObject::null().into_inner()
   )
 }
@@ -93,7 +103,7 @@ fn Init(env: JNIEnv, class: JClass) -> Result<()> {
   Ok(())
 }
 
-pub fn LoadModule(env: JNIEnv, class: JClass, path: JString, name: JString) -> Result<jlong> {
+pub fn LoadModule(env: JNIEnv, class: JClass, path: JString) -> Result<jlong> {
   let path: String = env.get_string(path).expect("Can't load in path string").into();
   let module = Module::from_file(store!().engine(), path)?;
 
@@ -155,6 +165,35 @@ pub fn Functions(env: JNIEnv, class: JClass, InstancePtr: jlong) -> Result<jobje
 
       _ => {}
     }
+  }
+
+  Ok(ret.into_inner())
+}
+
+
+fn CallFunction(env: JNIEnv, class: JClass, InstancePtr: jlong, functionName: JString, argsObj: JObject) -> Result<jobject> {
+  let Instance = &*ref_from_raw::<Instance>(InstancePtr)?;
+  let nameString: String = env.get_string(functionName).expect("Can't load in path string").into();
+  let ToCall = Instance.get_func(&nameString).unwrap();
+
+  let paramsTypes = Vec::from_iter(ToCall.ty().params());
+
+  let args = env.get_list(argsObj)?;
+
+  let mut params = Vec::new();
+
+  for i in 0..paramsTypes.len() {
+    params.push(ObjToVal(&env, args.get(i as i32)?.ok_or("Input param must not be null")?, paramsTypes.get(i).ok_or("Input type must not be null")?)?)
+  }
+
+  let res = ToCall.call(&params)?;
+
+  let listClass = env.find_class("java/util/ArrayList")?;
+  let ret = JList::from_env(&env, env.new_object(listClass, "()V", &[])?)?;
+
+  let valueClass = env.find_class("wasmruntime/Types/Value")?;
+  for val in res.iter() {
+    ret.add(ValToObj(env, val, valueClass)?)?;
   }
 
   Ok(ret.into_inner())
