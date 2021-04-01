@@ -27,7 +27,7 @@ public class AutoReload implements FileListener {
     if (!Modules.modules.containsKey(moduleName)) return;
     ModuleWrapper module = Modules.modules.get(moduleName);
 
-    // if (module.getFunc("autoReload").call()[0].i32() == 1) {
+    // if (module.getGlobal("autoReload").i32() == 1) {
     //   Modules.LoadModule(event.getFileObject());
     // }
   }

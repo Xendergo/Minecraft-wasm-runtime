@@ -13,6 +13,7 @@ import java.util.Map.Entry;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 
+import wasmruntime.Enums.WasmType;
 import wasmruntime.Exceptions.WasmtimeException;
 import wasmruntime.Types.FuncType;
 import wasmruntime.Types.Value;
@@ -23,6 +24,8 @@ public class ModuleWrapper {
   private long InstanceID;
 
   public Map<String, FuncType> exportedFunctions = new HashMap<String, FuncType>();
+
+  public Map<String, WasmType> exportedGlobals = new HashMap<String, WasmType>();
 
   static {
     try {
@@ -41,11 +44,16 @@ public class ModuleWrapper {
     moduleName = name;
     InstanceID = LoadModule(file.getPath().toAbsolutePath().toString());
     
-    for (Entry<String,List<Byte>> entry : Functions(InstanceID).entrySet()) {
+    for (Entry<String, List<Byte>> entry : Functions(InstanceID).entrySet()) {
       exportedFunctions.put(entry.getKey(), new FuncType(entry.getValue()));
     }
 
+    for (Entry<String, Byte> entry : Globals(InstanceID).entrySet()) {
+      exportedGlobals.put(entry.getKey(), WasmType.idMap.get(entry.getValue()));
+    }
+
     System.out.println(exportedFunctions);
+    System.out.println(exportedGlobals);
   }
 
   public List<Value<?>> CallFunction(String name, List<Value<?>> params) throws WasmtimeException {
@@ -53,16 +61,18 @@ public class ModuleWrapper {
   }
   
   public void close() {
-    UnloadModule();
+    UnloadModule(InstanceID);
   }
 
   private static native long LoadModule(String path) throws WasmtimeException;
 
   private static native void Init() throws WasmtimeException;
 
-  private static native void UnloadModule();
+  private static native void UnloadModule(long InstancePtr);
 
   private static native Map<String, List<Byte>> Functions(long InstancePtr) throws WasmtimeException;
 
   private static native List<Value<?>> CallFunction(long InstancePtr, String name, List<Value<?>> params) throws WasmtimeException;
+
+  private static native Map<String, Byte> Globals(long InstancePtr) throws WasmtimeException;
 }

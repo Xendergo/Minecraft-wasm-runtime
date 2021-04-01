@@ -58,10 +58,10 @@ pub extern "system" fn Java_wasmruntime_ModuleWrapper_LoadModule(env: JNIEnv, cl
 }
 
 #[no_mangle]
-pub extern "system" fn Java_wasmruntime_ModuleWrapper_UnloadModule(env: JNIEnv, class: JClass) {
+pub extern "system" fn Java_wasmruntime_ModuleWrapper_UnloadModule(env: JNIEnv, class: JClass, InstancePtr: jlong) {
   wrap_error!(
     env,
-    UnloadModule(env, class),
+    UnloadModule(env, class, InstancePtr),
     Default::default()
   )
 }
@@ -76,6 +76,15 @@ pub extern "system" fn Java_wasmruntime_ModuleWrapper_Functions(env: JNIEnv, cla
 }
 
 #[no_mangle]
+pub extern "system" fn Java_wasmruntime_ModuleWrapper_Globals(env: JNIEnv, class: JClass, InstancePtr: jlong) -> jobject {
+  wrap_error!(
+    env,
+    Globals(env, class, InstancePtr),
+    JObject::null().into_inner()
+  )
+}
+
+#[no_mangle]
 pub extern "system" fn Java_wasmruntime_ModuleWrapper_CallFunction(env: JNIEnv, class: JClass, InstancePtr: jlong, str: JString, args: JObject) -> jobject {
   wrap_error!(
     env,
@@ -84,7 +93,7 @@ pub extern "system" fn Java_wasmruntime_ModuleWrapper_CallFunction(env: JNIEnv, 
   )
 }
 
-fn Init(env: JNIEnv, class: JClass) -> Result<()> {
+fn Init(_env: JNIEnv, _class: JClass) -> Result<()> {
   let config = Config::default();
   let Store = Store::new(&Engine::new(&config).expect("There was an error generating a new engine"));
 
@@ -103,7 +112,7 @@ fn Init(env: JNIEnv, class: JClass) -> Result<()> {
   Ok(())
 }
 
-pub fn LoadModule(env: JNIEnv, class: JClass, path: JString) -> Result<jlong> {
+pub fn LoadModule(env: JNIEnv, _class: JClass, path: JString) -> Result<jlong> {
   let path: String = env.get_string(path).expect("Can't load in path string").into();
   let module = Module::from_file(store!().engine(), path)?;
 
@@ -116,12 +125,12 @@ pub fn LoadModule(env: JNIEnv, class: JClass, path: JString) -> Result<jlong> {
   Ok(into_raw::<Instance>(instance))
 }
 
-pub fn UnloadModule(env: JNIEnv, class: JClass) -> Result<()> {
-  interop::get_field::<JClass, &str, Instance>(&env, class, "InstanceID")?;
+pub fn UnloadModule(_env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<()> {
+  from_raw::<Instance>(InstancePtr)?;
   Ok(())
 }
 
-pub fn Functions(env: JNIEnv, class: JClass, InstancePtr: jlong) -> Result<jobject> {
+pub fn Functions(env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<jobject> {
   let Instance = &*ref_from_raw::<Instance>(InstancePtr)?;
   let exports = Instance::exports(Instance);
 
@@ -170,8 +179,38 @@ pub fn Functions(env: JNIEnv, class: JClass, InstancePtr: jlong) -> Result<jobje
   Ok(ret.into_inner())
 }
 
+pub fn Globals(env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<jobject> {
+  let Instance = &*ref_from_raw::<Instance>(InstancePtr)?;
+  let exports = Instance::exports(Instance);
 
-fn CallFunction(env: JNIEnv, class: JClass, InstancePtr: jlong, functionName: JString, argsObj: JObject) -> Result<jobject> {
+  let byteClass = env.find_class("java/lang/Byte")?;
+  let mapClass = env.find_class("java/util/HashMap")?;
+
+  let ret = JMap::from_env(&env, env.new_object(mapClass, "()V", &[])?)?;
+  
+  for global in exports {
+    match global.ty() {
+      ExternType::Global(v) => {        
+        let toAdd = env.new_object(byteClass, "(B)V", &[JValue::Byte(match v.content() {
+          ValType::I32 => 0,
+          ValType::I64 => 1,
+          ValType::F32 => 2,
+          ValType::F64 => 3,
+          ValType::V128 => 4,
+          ValType::ExternRef => 5,
+          ValType::FuncRef => 6
+        })])?;
+
+        ret.put(*env.new_string(global.name())?, toAdd)?;
+      }
+      _ => {}
+    }
+  }
+
+  Ok(ret.into_inner())
+}
+
+fn CallFunction(env: JNIEnv, _class: JClass, InstancePtr: jlong, functionName: JString, argsObj: JObject) -> Result<jobject> {
   let Instance = &*ref_from_raw::<Instance>(InstancePtr)?;
   let nameString: String = env.get_string(functionName).expect("Can't load in path string").into();
   let ToCall = Instance.get_func(&nameString).unwrap();
