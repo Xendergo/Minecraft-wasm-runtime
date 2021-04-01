@@ -27,6 +27,8 @@ public class ModuleWrapper {
 
   public Map<String, WasmType> exportedGlobals = new HashMap<String, WasmType>();
 
+  public static Map<String, Value<?>> knownSettings = new HashMap<String, Value<?>>();
+
   static {
     try {
       URL res = ModuleWrapper.class.getClassLoader().getResource("Wasmtime-embedding/target/debug/Wasmtime_embedding.dll");
@@ -38,6 +40,8 @@ public class ModuleWrapper {
     } catch (WasmtimeException e) {
       throw new RuntimeException(e);
     }
+
+    knownSettings.put("autoReload", Value.fromI32(0));
   }
 
   public ModuleWrapper(FileObject file, String name) throws FileSystemException, IOException, WasmtimeException {
@@ -51,13 +55,26 @@ public class ModuleWrapper {
     for (Entry<String, Byte> entry : Globals(InstanceID).entrySet()) {
       exportedGlobals.put(entry.getKey(), WasmType.idMap.get(entry.getValue()));
     }
-
-    System.out.println(exportedFunctions);
-    System.out.println(exportedGlobals);
   }
 
   public List<Value<?>> CallFunction(String name, List<Value<?>> params) throws WasmtimeException {
     return CallFunction(InstanceID, name, params);
+  }
+
+  public Value<?> GetSetting(String name) {
+    return GetGlobal(name, knownSettings.get(name));
+  }
+
+  public Value<?> GetGlobal(String name, Value<?> defaultValue) {
+    try {
+      return GetGlobal(InstanceID, name);
+    } catch (WasmtimeException e) {
+      return defaultValue;
+    }
+  }
+
+  public Value<?> GetGlobal(String name) throws WasmtimeException {
+    return GetGlobal(InstanceID, name);
   }
   
   public void close() {
@@ -75,4 +92,6 @@ public class ModuleWrapper {
   private static native List<Value<?>> CallFunction(long InstancePtr, String name, List<Value<?>> params) throws WasmtimeException;
 
   private static native Map<String, Byte> Globals(long InstancePtr) throws WasmtimeException;
+
+  private static native Value<?> GetGlobal(long InstancePtr, String name) throws WasmtimeException;
 }

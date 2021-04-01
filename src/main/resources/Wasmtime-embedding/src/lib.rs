@@ -93,6 +93,15 @@ pub extern "system" fn Java_wasmruntime_ModuleWrapper_CallFunction(env: JNIEnv, 
   )
 }
 
+#[no_mangle]
+pub extern "system" fn Java_wasmruntime_ModuleWrapper_GetGlobal(env: JNIEnv, class: JClass, InstancePtr: jlong, str: JString) -> jobject {
+  wrap_error!(
+    env,
+    GetGlobal(env, class, InstancePtr, str),
+    JObject::null().into_inner()
+  )
+}
+
 fn Init(_env: JNIEnv, _class: JClass) -> Result<()> {
   let config = Config::default();
   let Store = Store::new(&Engine::new(&config).expect("There was an error generating a new engine"));
@@ -230,10 +239,17 @@ fn CallFunction(env: JNIEnv, _class: JClass, InstancePtr: jlong, functionName: J
   let listClass = env.find_class("java/util/ArrayList")?;
   let ret = JList::from_env(&env, env.new_object(listClass, "()V", &[])?)?;
 
-  let valueClass = env.find_class("wasmruntime/Types/Value")?;
   for val in res.iter() {
-    ret.add(ValToObj(env, val, valueClass)?)?;
+    ret.add(ValToObj(env, val)?)?;
   }
 
   Ok(ret.into_inner())
+}
+
+fn GetGlobal(env: JNIEnv, _class: JClass, InstancePtr: jlong, globalName: JString) -> Result<jobject> {
+  let Instance = &*ref_from_raw::<Instance>(InstancePtr)?;
+  let nameString: String = env.get_string(globalName).expect("Can't load in path string").into();
+  let Global = Instance.get_global(&nameString).ok_or("Global doesn't exist")?;
+
+  Ok(ValToObj(env, &Global.get())?.into_inner())
 }

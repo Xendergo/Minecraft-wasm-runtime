@@ -1,7 +1,5 @@
 package wasmruntime;
 
-import java.io.IOException;
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.vfs2.FileChangeEvent;
 import org.apache.commons.vfs2.FileListener;
@@ -19,7 +17,7 @@ public class AutoReload implements FileListener {
     tryReload(event);
   }
 
-  private void tryReload(FileChangeEvent event) throws IOException {
+  private void tryReload(FileChangeEvent event) throws Exception {
     String moduleName = FilenameUtils.getBaseName(event.getFileObject().getName().getBaseName());
     
     System.out.println("Yee");
@@ -27,8 +25,8 @@ public class AutoReload implements FileListener {
     if (!Modules.modules.containsKey(moduleName)) return;
     ModuleWrapper module = Modules.modules.get(moduleName);
 
-    // if (module.getGlobal("autoReload").i32() == 1) {
-    //   Modules.LoadModule(event.getFileObject());
-    // }
+    if (module.GetSetting("autoReload").i32() == 1) {
+      Modules.LoadModule(event.getFileObject());
+    }
   }
 }

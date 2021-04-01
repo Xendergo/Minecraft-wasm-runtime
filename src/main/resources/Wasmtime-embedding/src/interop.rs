@@ -1,7 +1,7 @@
 // https://github.com/kawamuray/wasmtime-java/blob/master/wasmtime-jni/src/interop.rs
 
 use crate::errors::Result;
-use jni::objects::{JObject, JValue, JClass};
+use jni::objects::{JObject, JValue};
 use jni::sys::{jlong};
 use jni::JNIEnv;
 use std::sync::Mutex;
@@ -40,7 +40,8 @@ pub fn ObjToVal(env: &JNIEnv, obj: JObject, valType: &ValType) -> Result<Val> {
     }
 }
 
-pub fn ValToObj<'a>(env: JNIEnv<'a>, val: &Val, valClass: JClass) -> Result<JObject<'a>> {
+pub fn ValToObj<'a>(env: JNIEnv<'a>, val: &Val) -> Result<JObject<'a>> {
+    let valClass = env.find_class("wasmruntime/Types/Value")?;
     match val {
         Val::I32(v) => Ok(env.call_static_method(valClass, "fromI32", "(I)Lwasmruntime/Types/Value;", &[JValue::Int(*v)])?.l()?),
         Val::I64(v) => Ok(env.call_static_method(valClass, "fromI64", "(J)Lwasmruntime/Types/Value;", &[JValue::Long(*v)])?.l()?),
