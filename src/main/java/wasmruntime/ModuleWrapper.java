@@ -19,6 +19,7 @@ import wasmruntime.Types.FuncType;
 import wasmruntime.Types.Value;
 
 public class ModuleWrapper {
+  public static final String compileTo = "DEBUG";
   public String moduleName;
 
   private long InstanceID;
@@ -31,7 +32,17 @@ public class ModuleWrapper {
 
   static {
     try {
-      URL res = ModuleWrapper.class.getClassLoader().getResource("Wasmtime-embedding/target/debug/Wasmtime_embedding.dll");
+      String fileName;
+
+      if (compileTo == "DEBUG") {
+        fileName = "debug/Wasmtime_embedding.dll";
+      } else if (compileTo == "WINDOWS") {
+        fileName = "x86_64-pc-windows-gnu/release/Wasmtime_embedding.dll";
+      } else if (compileTo == "LINUX") {
+        fileName = "x86_64-unknown-linux-gnu/release/Wasmtime_embedding.so";
+      }
+
+      URL res = ModuleWrapper.class.getClassLoader().getResource("Wasmtime-embedding/target/" + fileName);
       File file = Paths.get(res.toURI()).toFile();
       System.load(file.getAbsolutePath());
       Init();

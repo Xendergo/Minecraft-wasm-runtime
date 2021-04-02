@@ -58,6 +58,12 @@ tasks.withType(JavaCompile).configureEach {
 	}
 }
 
+task releaseRust(type: Exec) {
+	workingDir 'src/main/resources/Wasmtime-embedding'
+
+	commandLine 'cargo', 'build', '--release', '--target', 'x86_64-pc-windows-gnu'
+}
+
 java {
 	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
 	// if it is present.

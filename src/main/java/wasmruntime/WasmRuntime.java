@@ -35,8 +35,6 @@ public class WasmRuntime implements ModInitializer {
 	public static FileSystemManager fsManager;
 	@Override
 	public void onInitialize() {
-		// System.setProperty("java.library.path", "Wasmtime-embedding/target/debug");
-
 		try {
 			fsManager = VFS.getManager();
 		} catch (Exception e2) {

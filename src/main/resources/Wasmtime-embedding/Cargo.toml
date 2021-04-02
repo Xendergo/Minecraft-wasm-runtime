@@ -16,3 +16,12 @@ thiserror = "1.0.20"
 anyhow = "1.0.31"
 wasi-cap-std-sync = "0.25.0"
 lazy_static = "1.4.0"
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = 'abort'
