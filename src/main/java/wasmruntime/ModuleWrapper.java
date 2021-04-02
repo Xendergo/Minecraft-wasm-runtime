@@ -10,9 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
-
 import wasmruntime.Enums.WasmType;
 import wasmruntime.Exceptions.WasmtimeException;
 import wasmruntime.Types.FuncType;
@@ -55,9 +52,9 @@ public class ModuleWrapper {
     knownSettings.put("autoReload", Value.fromI32(0));
   }
 
-  public ModuleWrapper(FileObject file, String name) throws FileSystemException, IOException, WasmtimeException {
+  public ModuleWrapper(File file, String name) throws IOException, WasmtimeException {
     moduleName = name;
-    InstanceID = LoadModule(file.getPath().toAbsolutePath().toString());
+    InstanceID = LoadModule(file.getAbsolutePath());
     
     for (Entry<String, List<Byte>> entry : Functions(InstanceID).entrySet()) {
       exportedFunctions.put(entry.getKey(), new FuncType(entry.getValue()));

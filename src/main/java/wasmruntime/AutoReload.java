@@ -1,32 +1,39 @@
 package wasmruntime;
 
+import java.io.File;
+
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.vfs2.FileChangeEvent;
-import org.apache.commons.vfs2.FileListener;
 
-public class AutoReload implements FileListener {
+public class AutoReload extends Thread {
+  public boolean getOofed = false;
+  @Override
+  public void run() {
+    while (true) {
+      if (getOofed) return;
 
-  // It doesn't matter if a file gets deleted
-  public void fileDeleted(FileChangeEvent event) throws Exception {}
+      long currentTime = System.currentTimeMillis();
 
-  public void fileCreated(FileChangeEvent event) throws Exception {
-    tryReload(event);
-  }
+      for (File file : WasmRuntime.configFolder.listFiles()) {
+        if (file.lastModified() - 1000 < currentTime) {
+          String moduleName = FilenameUtils.getBaseName(file.getName());
+            
+          if (!Modules.modules.containsKey(moduleName)) continue;
+          ModuleWrapper module = Modules.modules.get(moduleName);
+      
+          if (module.GetSetting("autoReload").i32() == 1) {
+            try {
+              Modules.LoadModule(file);
+            } catch (Exception e) {
+            }
+          }
+        }
+      }
 
-  public void fileChanged(FileChangeEvent event) throws Exception {
-    tryReload(event);
-  }
-
-  private void tryReload(FileChangeEvent event) throws Exception {
-    String moduleName = FilenameUtils.getBaseName(event.getFileObject().getName().getBaseName());
-    
-    System.out.println("Yee");
-
-    if (!Modules.modules.containsKey(moduleName)) return;
-    ModuleWrapper module = Modules.modules.get(moduleName);
-
-    if (module.GetSetting("autoReload").i32() == 1) {
-      Modules.LoadModule(event.getFileObject());
+      try {
+        sleep(1000);
+      } catch (Exception e) {
+        throw new RuntimeException("Autoreload thread was interrupted somehow");
+      }
     }
   }
 }

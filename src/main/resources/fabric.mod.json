@@ -3,7 +3,7 @@
   "id": "wasmruntime",
   "version": "${version}",
 
-  "name": "Fabric wasm runtime",
+  "name": "Minecraft wasm runtime",
   "description": "Make custom plugins for minecraft using any language that can compile to wasm",
   "authors": [
     "Xendergo"

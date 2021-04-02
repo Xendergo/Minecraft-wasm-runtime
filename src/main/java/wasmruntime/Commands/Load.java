@@ -1,5 +1,7 @@
 package wasmruntime.Commands;
 
+import java.io.File;
+
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -13,7 +15,7 @@ import wasmruntime.WasmRuntime;
 public class Load {
   public static int run(CommandContext<ServerCommandSource> ctx, String moduleName) throws CommandSyntaxException {
     try {
-      Modules.LoadModule(WasmRuntime.fsManager.resolveFile(WasmRuntime.configFolder, moduleName + ".wasm"));
+      Modules.LoadModule(new File(WasmRuntime.configFolder, moduleName + ".wasm"));
     } catch (Exception e) {
       throw new SimpleCommandExceptionType(new LiteralText(e.getMessage())).create();
     }

@@ -27,9 +27,6 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-	implementation 'org.apache.commons:commons-vfs2:2.8.0'
-	implementation 'org.apache.httpcomponents:httpclient:4.5.3'
-
 	// PSA: Some older mods, compiled on Loom 0.2.1, might have outdated Maven POMs.
 	// You may need to force-disable transitiveness on them.
 }
@@ -62,6 +59,7 @@ task releaseRust(type: Exec) {
 	workingDir 'src/main/resources/Wasmtime-embedding'
 
 	commandLine 'cargo', 'build', '--release', '--target', 'x86_64-pc-windows-gnu'
+	// cargo build --release --target x86_64-unknown-linux-gnu
 }
 
 java {

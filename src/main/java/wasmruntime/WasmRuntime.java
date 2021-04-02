@@ -8,12 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileSystemManager;
-import org.apache.commons.vfs2.VFS;
-import org.apache.commons.vfs2.impl.DefaultFileMonitor;
-
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -32,29 +26,14 @@ import static com.mojang.brigadier.arguments.StringArgumentType.*;
 
 public class WasmRuntime implements ModInitializer {
 	public static File configFolder;
-	public static FileSystemManager fsManager;
+	public static AutoReload reloadThread;
 	@Override
 	public void onInitialize() {
-		try {
-			fsManager = VFS.getManager();
-		} catch (Exception e2) {
-			throw new RuntimeException(e2);
-		}
-		
 		ServerLifecycleEvents.SERVER_STARTED.register((MinecraftServer server) -> {
 			configFolder = new File(server.getRunDirectory(), "config/wasm");
-			
-			FileObject listendir;
-			try {
-				listendir = fsManager.toFileObject(configFolder);
-			} catch (FileSystemException e1) {
-				throw new RuntimeException(e1);
-			}
 
-			DefaultFileMonitor fm = new DefaultFileMonitor(new AutoReload());
-			fm.setRecursive(true);
-			fm.addFile(listendir);
-			fm.start();
+			reloadThread = new AutoReload();
+			reloadThread.start();
 
 			File file = new File(server.getSavePath(WorldSavePath.ROOT).toFile(), "wasm.json");
 
@@ -78,9 +57,8 @@ public class WasmRuntime implements ModInitializer {
 					}
 
 					for (String modulePath : modulesPaths) {
-						FileObject module;
 						try {
-							module = fsManager.resolveFile(configFolder, modulePath + ".wasm");
+							File module = new File(configFolder, modulePath + ".wasm");
 							Modules.LoadModule(module);
 						} catch (IOException e) {
 							e.printStackTrace();
@@ -106,6 +84,7 @@ public class WasmRuntime implements ModInitializer {
 		});
 
 		ServerLifecycleEvents.SERVER_STOPPING.register((MinecraftServer server) -> {
+			reloadThread.getOofed = true;
 			for (String key : Modules.modules.keySet()) {
 				Modules.UnloadModule(key);
 			}
