@@ -2,13 +2,16 @@ package wasmruntime;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Paths;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.apache.commons.io.FilenameUtils;
 
 import wasmruntime.Enums.WasmType;
 import wasmruntime.Exceptions.WasmtimeException;
@@ -39,13 +42,19 @@ public class ModuleWrapper {
         fileName = "x86_64-unknown-linux-gnu/release/Wasmtime_embedding.so";
       }
 
-      URL res = ModuleWrapper.class.getClassLoader().getResource("Wasmtime-embedding/target/" + fileName);
-      File file = Paths.get(res.toURI()).toFile();
-      System.load(file.getAbsolutePath());
+      System.out.println(FilenameUtils.getPrefix(fileName));
+      Path tempFile = Files.createTempFile(FilenameUtils.removeExtension(fileName), FilenameUtils.getPrefix(fileName));
+      try (InputStream in = ModuleWrapper.class.getResourceAsStream('/' + fileName)) {
+        Files.copy(in, tempFile, StandardCopyOption.REPLACE_EXISTING);
+      }
+
+      // URL res = ModuleWrapper.class.getClassLoader().getResource("Wasmtime-embedding/target/" + fileName);
+      // File file = Paths.get(res.toURI()).toFile();
+      System.load(tempFile.toAbsolutePath().toString());
       Init();
-    } catch (URISyntaxException e) {
-      throw new RuntimeException(e);
     } catch (WasmtimeException e) {
+      throw new RuntimeException(e);
+    } catch (IOException e) {
       throw new RuntimeException(e);
     }
 
