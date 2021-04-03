@@ -5,6 +5,7 @@ import java.util.List;
 
 import wasmruntime.Enums.WasmType;
 
+// type signature of a wasm function -matgenius04
 public class FuncType {
   public WasmType[] inputs;
   public WasmType[] outputs;

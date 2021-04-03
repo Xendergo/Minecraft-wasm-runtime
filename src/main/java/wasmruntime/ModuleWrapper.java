@@ -2,65 +2,74 @@ package wasmruntime;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.commons.io.FilenameUtils;
-
 import wasmruntime.Enums.WasmType;
 import wasmruntime.Exceptions.WasmtimeException;
 import wasmruntime.Types.FuncType;
 import wasmruntime.Types.Value;
+import wasmruntime.Utils.DetectOS;
+import wasmruntime.Utils.NativeUtils;
 
 public class ModuleWrapper {
-  public static final String compileTo = "DEBUG";
+  public static final boolean debug = true;
   public String moduleName;
 
   private long InstanceID;
-
+  
   public Map<String, FuncType> exportedFunctions = new HashMap<String, FuncType>();
 
   public Map<String, WasmType> exportedGlobals = new HashMap<String, WasmType>();
 
+  // <name, default>
   public static Map<String, Value<?>> knownSettings = new HashMap<String, Value<?>>();
 
   static {
     try {
-      String fileName;
+      String fileName = "";
 
-      if (compileTo == "DEBUG") {
+      if (debug) {
+        // because I'm a window's simp
         fileName = "debug/Wasmtime_embedding.dll";
-      } else if (compileTo == "WINDOWS") {
-        fileName = "x86_64-pc-windows-gnu/release/Wasmtime_embedding.dll";
-      } else if (compileTo == "LINUX") {
-        fileName = "x86_64-unknown-linux-gnu/release/Wasmtime_embedding.so";
-      }
+      } else {
+        // for some reason my naming conventions are all over the place
+        // but that's ok
+        // psssstt... DetectOS is some code that was copied from stackoverflow
+        // duh it has a stack overflow link -xendergo
+        switch (DetectOS.getOperatingSystemType()) {
+          case Windows:
+          fileName = "Wasmtime_embedding.dll";
+          break;
 
-      System.out.println(FilenameUtils.getPrefix(fileName));
-      Path tempFile = Files.createTempFile(FilenameUtils.removeExtension(fileName), FilenameUtils.getPrefix(fileName));
-      try (InputStream in = ModuleWrapper.class.getResourceAsStream('/' + fileName)) {
-        Files.copy(in, tempFile, StandardCopyOption.REPLACE_EXISTING);
-      }
+          case MacOS:
+          fileName = "Wasmtime_embedding.dylib";
+          break;
 
-      // URL res = ModuleWrapper.class.getClassLoader().getResource("Wasmtime-embedding/target/" + fileName);
-      // File file = Paths.get(res.toURI()).toFile();
-      System.load(tempFile.toAbsolutePath().toString());
+          case Linux:
+          fileName = "Wasmtime_embedding.so";
+          break;
+          
+          default:
+          throw new RuntimeException("Your OS is unsupported right now");
+        }
+      }
+      // Uses the NativeUtils library because dependency's are hard?
+      NativeUtils.loadLibraryFromJar("/Wasmtime-embedding/target/"+fileName);
+      // Initializes the things?
       Init();
     } catch (WasmtimeException e) {
       throw new RuntimeException(e);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-
+    // Set's autoReload to false which is apparently the default value according to Xendergo
+    // this doesn't set anything this is literally just a default value -xendergo
     knownSettings.put("autoReload", Value.fromI32(0));
   }
-
+  // Wraps on a module like a day old piece of spaghettttt / Constructor sometimes I think
   public ModuleWrapper(File file, String name) throws IOException, WasmtimeException {
     moduleName = name;
     InstanceID = LoadModule(file.getAbsolutePath());
@@ -104,10 +113,12 @@ public class ModuleWrapper {
 
   private static native void UnloadModule(long InstancePtr);
 
+  // all functions in the module
   private static native Map<String, List<Byte>> Functions(long InstancePtr) throws WasmtimeException;
 
   private static native List<Value<?>> CallFunction(long InstancePtr, String name, List<Value<?>> params) throws WasmtimeException;
 
+  // all globals in the module
   private static native Map<String, Byte> Globals(long InstancePtr) throws WasmtimeException;
 
   private static native Value<?> GetGlobal(long InstancePtr, String name) throws WasmtimeException;
