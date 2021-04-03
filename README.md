@@ -41,5 +41,6 @@ To automatically load wasm modules, in your world folder, open `wasm.json` and b
 ]
 ```
 
+To run a function you can use `/wasm invoke <moduleName> <functionName> <arguments>`
 
 ps if you see weird comments in the source code blame matgenius04
