@@ -71,7 +71,7 @@ public class Invoke {
       return 0;
     }
 
-    Message.broadcast(new TranslatableText("wasm.commands.invoke.return", output), ctx.getSource().getMinecraftServer());
+    Message.broadcast(new TranslatableText("wasm.commands.invoke.return", output));
 
     return Command.SINGLE_SUCCESS;
   }

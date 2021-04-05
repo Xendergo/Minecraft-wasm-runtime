@@ -7,10 +7,12 @@ import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
 
+import net.minecraft.server.MinecraftServer;
 import wasmruntime.Exceptions.WasmtimeException;
 
 public class Modules {
   public static Map<String, ModuleWrapper> modules = new HashMap<String, ModuleWrapper>();
+  public static MinecraftServer server;
   public static void LoadModule(File path) throws IOException, WasmtimeException {
     String name = FilenameUtils.getBaseName(path.getName());
 

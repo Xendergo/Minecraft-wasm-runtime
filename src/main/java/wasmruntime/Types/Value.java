@@ -42,5 +42,5 @@ public class Value<T extends Number> {
   @Override
   public String toString() {
     return value.toString();
-  };
+  }
 }

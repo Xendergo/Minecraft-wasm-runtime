@@ -18,6 +18,7 @@ import wasmruntime.Commands.Suggestions.ExportedFunctions;
 import wasmruntime.Commands.Suggestions.LoadableModules;
 import wasmruntime.Commands.Suggestions.LoadedModules;
 import wasmruntime.Exceptions.WasmtimeException;
+import wasmruntime.Imports.Printing;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.WorldSavePath;
 
@@ -81,9 +82,13 @@ public class WasmRuntime implements ModInitializer {
 					System.out.println("Couldn't create wasm.json file");
 				}
 			}
+
+			Modules.server = server;
 		});
 
 		ServerLifecycleEvents.SERVER_STOPPING.register((MinecraftServer server) -> {
+			Modules.server = null;
+			
 			reloadThread.getOofed = true;
 			for (String key : Modules.modules.keySet()) {
 				Modules.UnloadModule(key);
@@ -112,5 +117,9 @@ public class WasmRuntime implements ModInitializer {
 																				)
 																			);
 		});
+
+
+		// Register imports
+		ModuleImports.Register("log", Printing::log);
 	}
 }
