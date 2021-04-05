@@ -9,7 +9,7 @@ public class Printing {
     Object[] values = new Object[ctx.values.length];
 
     for (int i = 0; i < values.length; i++) {
-      switch (ctx.types[i]) {
+      switch (ctx.values[i].type) {
         case I32:
         values[i] = ctx.values[i].i32();
         break;

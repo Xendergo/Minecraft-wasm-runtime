@@ -240,7 +240,7 @@ fn CallFunction(env: JNIEnv, _class: JClass, InstancePtr: jlong, functionName: J
   let ret = JList::from_env(&env, env.new_object(listClass, "()V", &[])?)?;
 
   for val in res.iter() {
-    ret.add(ValToObj(env, val)?)?;
+    ret.add(ValToObj(&env, val)?)?;
   }
 
   Ok(ret.into_inner())
@@ -251,5 +251,5 @@ fn GetGlobal(env: JNIEnv, _class: JClass, InstancePtr: jlong, globalName: JStrin
   let nameString: String = env.get_string(globalName).expect("Can't load in path string").into();
   let Global = Instance.get_global(&nameString).ok_or("Global doesn't exist")?;
 
-  Ok(ValToObj(env, &Global.get())?.into_inner())
+  Ok(ValToObj(&env, &Global.get())?.into_inner())
 }

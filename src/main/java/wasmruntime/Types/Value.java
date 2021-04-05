@@ -1,10 +1,14 @@
 package wasmruntime.Types;
 
+import wasmruntime.Enums.WasmType;
+
 public class Value<T extends Number> {
   public T value;
+  public WasmType type;
 
-  private Value(T value) {
+  private Value(T value, WasmType type) {
     this.value = value;
+    this.type = type;
   }
 
   public int i32() {
@@ -24,19 +28,19 @@ public class Value<T extends Number> {
   }
   
   public static Value<Integer> fromI32(int v) {
-    return new Value<Integer>(v);
+    return new Value<Integer>(v, WasmType.I32);
   }
 
   public static Value<Long> fromI64(long v) {
-    return new Value<Long>(v);
+    return new Value<Long>(v, WasmType.I64);
   }
 
   public static Value<Float> fromF32(float v) {
-    return new Value<Float>(v);
+    return new Value<Float>(v, WasmType.F32);
   }
 
   public static Value<Double> fromF64(double v) {
-    return new Value<Double>(v);
+    return new Value<Double>(v, WasmType.F64);
   }
 
   @Override
