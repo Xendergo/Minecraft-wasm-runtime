@@ -72,7 +72,7 @@ public class ModuleWrapper {
   // Wraps on a module like a day old piece of spaghettttt / Constructor sometimes I think
   public ModuleWrapper(File file, String name) throws IOException, WasmtimeException {
     moduleName = name;
-    InstanceID = LoadModule(file.getAbsolutePath());
+    InstanceID = LoadModule(file.getAbsolutePath(), moduleName);
     
     for (Entry<String, List<Byte>> entry : Functions(InstanceID).entrySet()) {
       exportedFunctions.put(entry.getKey(), new FuncType(entry.getValue()));
@@ -107,7 +107,7 @@ public class ModuleWrapper {
     UnloadModule(InstanceID);
   }
 
-  private static native long LoadModule(String path) throws WasmtimeException;
+  private static native long LoadModule(String path, String name) throws WasmtimeException;
 
   private static native void Init() throws WasmtimeException;
 

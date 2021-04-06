@@ -3,11 +3,11 @@ package wasmruntime.Utils;
 import wasmruntime.Types.Value;
 
 public class ImportCallCtx {
-  public long InstancePtr;
+  public String InstancePtr;
   public Value<?>[] values;
 
-  public ImportCallCtx(Value<?>[] values, long InstancePtr) {
+  public ImportCallCtx(Value<?>[] values, String ModuleName) {
     this.values = values;
-    this.InstancePtr = InstancePtr;
+    this.InstancePtr = ModuleName;
   }
 }

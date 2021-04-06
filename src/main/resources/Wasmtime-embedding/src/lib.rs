@@ -24,7 +24,8 @@ macro_rules! wrap_error {
     match $body {
       Ok(v) => v,
       Err(e) => {
-        $env.throw(e).expect("error in throwing exception");
+        println!("{}", e);
+        $env.throw(e).unwrap();
         $default
       }
     }
@@ -49,10 +50,10 @@ pub extern "system" fn Java_wasmruntime_ModuleWrapper_Init(env: JNIEnv, class: J
 }
 
 #[no_mangle]
-pub extern "system" fn Java_wasmruntime_ModuleWrapper_LoadModule(env: JNIEnv, class: JClass, path: JString) -> jlong {
+pub extern "system" fn Java_wasmruntime_ModuleWrapper_LoadModule(env: JNIEnv, class: JClass, path: JString, moduleName: JString) -> jlong {
   wrap_error!(
     env,
-    LoadModule(env, class, path),
+    LoadModule(env, class, path, moduleName),
     Default::default()
   )
 }
@@ -121,8 +122,8 @@ fn Init(_env: JNIEnv, _class: JClass) -> Result<()> {
   Ok(())
 }
 
-pub fn LoadModule(env: JNIEnv, _class: JClass, path: JString) -> Result<jlong> {
-  let path: String = env.get_string(path).expect("Can't load in path string").into();
+pub fn LoadModule(env: JNIEnv, _class: JClass, path: JString, moduleName: JString) -> Result<jlong> {
+  let path: String = env.get_string(path)?.into();
   let module = Module::from_file(store!().engine(), path)?;
 
   let mut Linker = Linker::new(store!());
@@ -131,16 +132,12 @@ pub fn LoadModule(env: JNIEnv, _class: JClass, path: JString) -> Result<jlong> {
 
   let imports = module.imports();
 
-  let instance = Linker.instantiate(&module)?;
-  
-  let InstancePtr = into_raw::<Instance>(instance);
-  
-  
   for import in imports {
     let jvm = env.get_java_vm()?;
     let name = String::from(import.name().unwrap());
+    let moduleName2 = env.get_string(moduleName)?.into();
     let func = Func::new(store!(), import.ty().unwrap_func().clone(), move |_caller, params, results| {
-      match CallImport(&jvm, params, &name, InstancePtr, results) {
+      match CallImport(&jvm, params, &name, &moduleName2, results) {
         Ok(_) => Ok(()),
         Err(e) => Err(Trap::new(e.to_string()))
       }
@@ -148,6 +145,10 @@ pub fn LoadModule(env: JNIEnv, _class: JClass, path: JString) -> Result<jlong> {
 
     Linker.define(import.module(), import.name().unwrap(), Extern::Func(func))?;
   }
+
+  let instance = Linker.instantiate(&module)?;
+  
+  let InstancePtr = into_raw::<Instance>(instance);
 
   Ok(InstancePtr)
 }

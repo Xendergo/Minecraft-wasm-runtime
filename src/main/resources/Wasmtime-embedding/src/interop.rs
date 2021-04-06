@@ -68,7 +68,7 @@ pub fn ValToObjWithClass<'a>(env: &JNIEnv<'a>, val: &Val, valClass: JClass) -> R
     }
 }
 
-pub fn CallImport<'a>(jvm: &JavaVM, vals: &[Val], name: &String, InstancePtr: jlong, results: &mut [Val]) -> Result<()> {
+pub fn CallImport<'a>(jvm: &JavaVM, vals: &[Val], name: &String, ModuleName: &String, results: &mut [Val]) -> Result<()> {
     let env = jvm.attach_current_thread_permanently()?;
 
     let valClass = env.find_class("wasmruntime/Types/Value")?;
@@ -82,8 +82,8 @@ pub fn CallImport<'a>(jvm: &JavaVM, vals: &[Val], name: &String, InstancePtr: jl
 
     let jName = JValue::Object(*env.new_string(name)?);
     let jArgArray = JValue::Object(JObject::from(argArray));
-    let jInstancePtr = JValue::Long(InstancePtr);
-    let ret: jobjectArray = env.call_static_method(importsClass, "callImport", "(Ljava/lang/String;[Lwasmruntime/Types/Value;)[Lwasmruntime/Types/Value;J", &[jName, jArgArray, jInstancePtr])?.l()?.into_inner();
+    let jModuleName = JValue::Object(*env.new_string(ModuleName)?);
+    let ret: jobjectArray = env.call_static_method(importsClass, "callImport", "(Ljava/lang/String;[Lwasmruntime/Types/Value;Ljava/lang/String;)[Lwasmruntime/Types/Value;", &[jName, jArgArray, jModuleName])?.l()?.into_inner();
 
     for i in 0..env.get_array_length(ret)? {
         let obj = env.get_object_array_element(ret, i)?;

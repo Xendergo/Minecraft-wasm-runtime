@@ -10,8 +10,8 @@ import wasmruntime.Utils.ImportCallCtx;
 class ModuleImports {
   public static Map<String, Function<ImportCallCtx, Value<?>[]>> imports = new HashMap<String, Function<ImportCallCtx, Value<?>[]>>();
 
-  public static Value<?>[] callImport(String name, Value<?>[] values, long InstancePtr) {
-    return imports.get(name).apply(new ImportCallCtx(values, InstancePtr));
+  public static Value<?>[] callImport(String name, Value<?>[] values, String ModuleName) {
+    return imports.get(name).apply(new ImportCallCtx(values, ModuleName));
   }
 
   public static void Register(String name, Function<ImportCallCtx, Value<?>[]> fn) {
