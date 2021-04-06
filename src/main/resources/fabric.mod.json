@@ -29,6 +29,6 @@
     "minecraft": "1.16.x"
   },
   "suggests": {
-    "another-mod": "*"
+    "carpet": "1.4.30"
   }
 }
