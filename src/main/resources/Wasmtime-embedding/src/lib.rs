@@ -129,9 +129,27 @@ pub fn LoadModule(env: JNIEnv, _class: JClass, path: JString) -> Result<jlong> {
   let wasi = Wasi::new(store!(), WasiCtxBuilder::new().inherit_stdio().build()?);
   wasi.add_to_linker(&mut Linker)?;
 
-  let instance = Linker.instantiate(&module)?;
+  let imports = module.imports();
 
-  Ok(into_raw::<Instance>(instance))
+  let instance = Linker.instantiate(&module)?;
+  
+  let InstancePtr = into_raw::<Instance>(instance);
+  
+  
+  for import in imports {
+    let jvm = env.get_java_vm()?;
+    let name = String::from(import.name().unwrap());
+    let func = Func::new(store!(), import.ty().unwrap_func().clone(), move |_caller, params, results| {
+      match CallImport(&jvm, params, &name, InstancePtr, results) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(Trap::new(e.to_string()))
+      }
+    });
+
+    Linker.define(import.module(), import.name().unwrap(), Extern::Func(func))?;
+  }
+
+  Ok(InstancePtr)
 }
 
 pub fn UnloadModule(_env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<()> {

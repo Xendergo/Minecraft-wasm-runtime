@@ -3,7 +3,7 @@
 use crate::errors::{Result, Error};
 use jni::objects::{JObject, JValue, JClass};
 use jni::sys::{jlong, jobjectArray};
-use jni::JNIEnv;
+use jni::{JNIEnv, JavaVM};
 use std::sync::Mutex;
 use std::sync::MutexGuard;
 use wasmtime::{Val, ValType};
@@ -68,14 +68,16 @@ pub fn ValToObjWithClass<'a>(env: &JNIEnv<'a>, val: &Val, valClass: JClass) -> R
     }
 }
 
-pub fn CallImport<'a>(env: &JNIEnv<'a>, vals: &[Val], name: String, InstancePtr: jlong) -> Result<Vec<Val>> {
+pub fn CallImport<'a>(jvm: &JavaVM, vals: &[Val], name: &String, InstancePtr: jlong, results: &mut [Val]) -> Result<()> {
+    let env = jvm.attach_current_thread_permanently()?;
+
     let valClass = env.find_class("wasmruntime/Types/Value")?;
     let importsClass = env.find_class("wasmruntime/ModuleImports")?;
 
     let argArray = env.new_object_array(vals.len() as i32, valClass, JObject::null())?;
 
     for i in 0..vals.len() {
-        env.set_object_array_element(argArray, i as i32, ValToObjWithClass(env, &vals[i], valClass)?)?;
+        env.set_object_array_element(argArray, i as i32, ValToObjWithClass(&env, &vals[i], valClass)?)?;
     }
 
     let jName = JValue::Object(*env.new_string(name)?);
@@ -83,12 +85,10 @@ pub fn CallImport<'a>(env: &JNIEnv<'a>, vals: &[Val], name: String, InstancePtr:
     let jInstancePtr = JValue::Long(InstancePtr);
     let ret: jobjectArray = env.call_static_method(importsClass, "callImport", "(Ljava/lang/String;[Lwasmruntime/Types/Value;)[Lwasmruntime/Types/Value;J", &[jName, jArgArray, jInstancePtr])?.l()?.into_inner();
 
-    let mut rustyRet = Vec::new();
-
     for i in 0..env.get_array_length(ret)? {
         let obj = env.get_object_array_element(ret, i)?;
-        rustyRet.push(ObjToVal(env, obj, &ObjToValType(env, obj)?)?);
+        results[i as usize] = ObjToVal(&env, obj, &ObjToValType(&env, obj)?)?;
     }
 
-    Ok(rustyRet)
+    Ok(())
 }
