@@ -2,6 +2,9 @@ package wasmruntime.CarpetStuff;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.ArrayUtils;
 
 import carpet.CarpetExtension;
 import carpet.script.CarpetExpression;
@@ -12,6 +15,7 @@ import carpet.script.value.NumericValue;
 import carpet.script.value.StringValue;
 import wasmruntime.ModuleWrapper;
 import wasmruntime.Modules;
+import wasmruntime.Enums.WasmType;
 import wasmruntime.Types.FuncType;
 import wasmruntime.Types.Value;
 
@@ -40,39 +44,10 @@ public class Extension implements CarpetExtension {
 
       FuncType type = module.exportedFunctions.get(name);
       int argAmt = type.inputs.length;
-      if (argAmt != params.size() - 2) throw new InternalExpressionException("The function " + name + " requires " + argAmt + " arguments");
 
-      List<Value<?>> inputs = new ArrayList<Value<?>>(argAmt);
+      List<Value<?>> inputs = ScarpetToWasm(params.stream().skip(2).collect(Collectors.toList()), type.inputs);
 
-      for (int i = 0; i < argAmt; i++) {
-        carpet.script.value.Value v = params.get(i + 2);
-
-        if (v instanceof NumericValue) {
-          NumericValue v2 = (NumericValue) v;
-          switch (type.inputs[i]) {
-            case I32:
-            inputs.add(Value.fromI32(v2.getInt()));
-            break;
-
-            case I64:
-            inputs.add(Value.fromI64(v2.getLong()));
-            break;
-
-            case F32:
-            inputs.add(Value.fromF32(v2.getFloat()));
-            break;
-
-            case F64:
-            inputs.add(Value.fromF64(v2.getDouble()));
-            break;
-
-            default:
-            throw new InternalExpressionException("Calling a function with a non-numeric argument is unsupported");
-          }
-        } else {
-          throw new InternalExpressionException("Argument must have a numeric type");
-        }
-      }
+      if (argAmt != inputs.size()) throw new InternalExpressionException("The function " + name + " requires " + argAmt + " arguments");
 
       List<Value<?>> ret;
       try {
@@ -108,5 +83,47 @@ public class Extension implements CarpetExtension {
 
       return ListValue.wrap(scarpyRet);
     });
+  }
+
+  public List<Value<?>> ScarpetToWasm(List<carpet.script.value.Value> scarpetArgs, WasmType[] inputTypes) {
+    List<Value<?>> ret = new ArrayList<Value<?>>();
+
+    int i = 0;
+    for (carpet.script.value.Value value : scarpetArgs) {
+      if (value instanceof NumericValue) {
+        NumericValue v2 = (NumericValue) value;
+        switch (inputTypes[i]) {
+          case I32:
+          ret.add(Value.fromI32(v2.getInt()));
+          break;
+
+          case I64:
+          ret.add(Value.fromI64(v2.getLong()));
+          break;
+
+          case F32:
+          ret.add(Value.fromF32(v2.getFloat()));
+          break;
+
+          case F64:
+          ret.add(Value.fromF64(v2.getDouble()));
+          break;
+
+          default:
+          throw new InternalExpressionException("Calling a function with a non-numeric argument is unsupported");
+        }
+
+        i++;
+      } else if (value instanceof ListValue) {
+        List<carpet.script.value.Value> values = ((ListValue) value).getItems();
+
+        ret.addAll(ScarpetToWasm(values, ArrayUtils.subarray(inputTypes, i, i + values.size())));
+        i += values.size();
+      } else {
+        throw new InternalExpressionException("Argument must have a numeric type");
+      }
+    }
+
+    return ret;
   }
 }
