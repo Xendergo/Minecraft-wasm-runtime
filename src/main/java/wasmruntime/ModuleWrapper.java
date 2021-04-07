@@ -2,6 +2,7 @@ package wasmruntime;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,6 +86,10 @@ public class ModuleWrapper {
 
   public List<Value<?>> CallFunction(String name, List<Value<?>> params) throws WasmtimeException {
     return CallFunction(InstanceID, name, params);
+  }
+
+  public Value<?>[] CallFunction(String name, Value<?>[] params) throws WasmtimeException {
+    return CallFunction(InstanceID, name, Arrays.asList(params)).toArray(new Value<?>[0]);
   }
 
   public Value<?> GetSetting(String name) {
