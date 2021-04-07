@@ -8,10 +8,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import carpet.CarpetServer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.lib.gson.JsonReader;
+import wasmruntime.CarpetStuff.Extension;
 import wasmruntime.Commands.Invoke;
 import wasmruntime.Commands.Load;
 import wasmruntime.Commands.Suggestions.ExportedFunctions;
@@ -81,6 +83,14 @@ public class WasmRuntime implements ModInitializer {
 				} catch (IOException e) {
 					System.out.println("Couldn't create wasm.json file");
 				}
+			}
+
+			try {
+				Class.forName("carpet.CarpetExtension");
+
+				CarpetServer.manageExtension(new Extension());
+			} catch (Exception e) {
+
 			}
 
 			Modules.server = server;
