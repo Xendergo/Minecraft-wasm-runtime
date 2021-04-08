@@ -24,6 +24,10 @@ public class FuncType {
     this.outputs = outputs.toArray(new WasmType[0]);
   }
 
+  public static FuncType FromList(List<Byte> bytes) {
+    return new FuncType(bytes);
+  }
+
   @Override
   public String toString() {
     return inputs + " => " + outputs;

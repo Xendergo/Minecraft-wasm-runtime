@@ -50,10 +50,10 @@ pub extern "system" fn Java_wasmruntime_ModuleWrapper_Init(env: JNIEnv, class: J
 }
 
 #[no_mangle]
-pub extern "system" fn Java_wasmruntime_ModuleWrapper_LoadModule(env: JNIEnv, class: JClass, path: JString, moduleName: JString) -> jlong {
+pub extern "system" fn Java_wasmruntime_ModuleWrapper_LoadModule(env: JNIEnv, class: JClass, path: JString, moduleName: JString, jImports: JObject) -> jlong {
   wrap_error!(
     env,
-    LoadModule(env, class, path, moduleName),
+    LoadModule(env, class, path, moduleName, jImports),
     Default::default()
   )
 }
@@ -122,7 +122,7 @@ fn Init(_env: JNIEnv, _class: JClass) -> Result<()> {
   Ok(())
 }
 
-pub fn LoadModule(env: JNIEnv, _class: JClass, path: JString, moduleName: JString) -> Result<jlong> {
+pub fn LoadModule(env: JNIEnv, _class: JClass, path: JString, moduleName: JString, jImportsObj: JObject) -> Result<jlong> {
   let path: String = env.get_string(path)?.into();
   let module = Module::from_file(store!().engine(), path)?;
 
@@ -132,11 +132,16 @@ pub fn LoadModule(env: JNIEnv, _class: JClass, path: JString, moduleName: JStrin
 
   let imports = module.imports();
 
+  let funcTypeClass = env.find_class("wasmruntime/Types/FuncType")?;
+
+  let jImports = env.get_map(jImportsObj)?;
+
   for import in imports {
     let jvm = env.get_java_vm()?;
     let name = String::from(import.name().unwrap());
     let moduleName2 = env.get_string(moduleName)?.into();
-    let func = Func::new(store!(), import.ty().unwrap_func().clone(), move |_caller, params, results| {
+    let ty = import.ty().unwrap_func().clone();
+    let func = Func::new(store!(), ty, move |_caller, params, results| {
       match CallImport(&jvm, params, &name, &moduleName2, results) {
         Ok(_) => Ok(()),
         Err(e) => Err(Trap::new(e.to_string()))
@@ -144,6 +149,8 @@ pub fn LoadModule(env: JNIEnv, _class: JClass, path: JString, moduleName: JStrin
     });
 
     Linker.define(import.module(), import.name().unwrap(), Extern::Func(func))?;
+
+    jImports.put(*env.new_string(String::from(import.name().unwrap()))?, env.call_static_method(funcTypeClass, "FromList", "(Ljava/util/List;)Lwasmruntime/Types/FuncType;", &[JValue::Object(FuncTypeToBytes(env, import.ty().unwrap_func().clone())?)])?.l()?)?;
   }
 
   let instance = Linker.instantiate(&module)?;
@@ -160,46 +167,15 @@ pub fn UnloadModule(_env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<
 
 pub fn Functions(env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<jobject> {
   let Instance = &*ref_from_raw::<Instance>(InstancePtr)?;
-  let exports = Instance::exports(Instance);
+  let exports = Instance.exports();
 
-  let byteClass = env.find_class("java/lang/Byte")?;
   let mapClass = env.find_class("java/util/HashMap")?;
-  let listClass = env.find_class("java/util/ArrayList")?;
 
   let ret = JMap::from_env(&env, env.new_object(mapClass, "()V", &[])?)?;
   
   for func in exports {
     match func.ty() {
-      ExternType::Func(v) => {
-        let toAdd = JList::from_env(&env, env.new_object(listClass, "()V", &[])?)?;
-        
-        for param in v.params() {
-          toAdd.add(env.new_object(byteClass, "(B)V", &[JValue::Byte(match param {
-            ValType::I32 => 0,
-            ValType::I64 => 1,
-            ValType::F32 => 2,
-            ValType::F64 => 3,
-            ValType::V128 => 4,
-            ValType::ExternRef => 5,
-            ValType::FuncRef => 6
-          })])?)?;
-        }
-
-        for result in v.results() {
-          toAdd.add(env.new_object(byteClass, "(B)V", &[JValue::Byte(match result {
-            ValType::I32 => -128,
-            ValType::I64 => -127,
-            ValType::F32 => -126,
-            ValType::F64 => -125,
-            ValType::V128 => -124,
-            ValType::ExternRef => -123,
-            ValType::FuncRef => -122
-          })])?)?;
-        }
-
-        ret.put(*env.new_string(func.name())?, *toAdd)?;
-      }
-
+      ExternType::Func(v) => {ret.put(*env.new_string(func.name())?, FuncTypeToBytes(env, v)?)?;},
       _ => {}
     }
   }

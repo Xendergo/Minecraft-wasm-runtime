@@ -1,23 +1,32 @@
 package wasmruntime.CarpetStuff;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ArrayUtils;
 
 import carpet.CarpetExtension;
 import carpet.script.CarpetExpression;
+import carpet.script.Context;
 import carpet.script.Expression;
+import carpet.script.LazyValue;
+import carpet.script.argument.FunctionArgument;
 import carpet.script.exception.InternalExpressionException;
+import carpet.script.value.FunctionValue;
 import carpet.script.value.ListValue;
 import carpet.script.value.NumericValue;
 import carpet.script.value.StringValue;
 import wasmruntime.ModuleWrapper;
 import wasmruntime.Modules;
+import wasmruntime.ModuleImports;
 import wasmruntime.Enums.WasmType;
 import wasmruntime.Types.FuncType;
 import wasmruntime.Types.Value;
+import wasmruntime.Utils.ImportCallCtx;
 
 public class Extension implements CarpetExtension {
   @Override
@@ -35,7 +44,7 @@ public class Extension implements CarpetExtension {
     });
 
     expr.addFunction("call_wasm_function", (params) -> {
-      if (params.size() < 2 || !(params.get(0) instanceof ModuleValue) || !(params.get(1) instanceof StringValue)) throw new InternalExpressionException("Must provide a module and a function name");
+      AssertModuleFunctionParams(params);
 
       ModuleWrapper module = ((ModuleValue)params.get(0)).module;
       String name = ((StringValue)params.get(1)).getString();
@@ -56,33 +65,38 @@ public class Extension implements CarpetExtension {
         throw new InternalExpressionException("Wasm trapped: " + e.getMessage());
       }
 
-      List<carpet.script.value.Value> scarpyRet = new ArrayList<carpet.script.value.Value>(ret.size());
-
-      for (Value<?> v : ret) {
-        switch (v.type) {
-          case I32:
-          scarpyRet.add(NumericValue.of(v.i32()));
-          break;
-
-          case I64:
-          scarpyRet.add(NumericValue.of(v.i64()));
-          break;
-
-          case F32:
-          scarpyRet.add(NumericValue.of(v.f32()));
-          break;
-
-          case F64:
-          scarpyRet.add(NumericValue.of(v.f64()));
-          break;
-
-          default:
-          throw new InternalExpressionException("Couldn't convert non-number return type to a number");
-        }
-      }
-
-      return ListValue.wrap(scarpyRet);
+      return ListValue.wrap(WasmToScarpet(ret));
     });
+
+    expr.addLazyFunction("provide_import", -1, (c, i, paramsOof) -> {
+      List<carpet.script.value.Value> params = ToValues(paramsOof, c);
+      int paramAmt = params.size();
+      if (paramAmt < 3) throw new InternalExpressionException("Must provide a wasm module, a function name, & a scarpet function to call back");
+
+      AssertModuleFunctionParams(params);
+
+      if (!(params.get(2) instanceof StringValue || params.get(2) instanceof FunctionValue)) throw new InternalExpressionException("Must provide a scarpet function or function name");
+
+      FunctionArgument<LazyValue> provided = FunctionArgument.findIn(c, expr.module, paramsOof, 2, false, false);
+
+      ModuleWrapper module = ((ModuleValue)params.get(0)).module;
+
+      if (!ModuleImports.perModuleImports.containsKey(module.moduleName)) ModuleImports.perModuleImports.put(module.moduleName, new HashMap<String, Function<ImportCallCtx, Value<?>[]>>());
+
+      ModuleImports.perModuleImports.get(module.moduleName).put(((StringValue)params.get(1)).getString(), (ctx) -> {
+        return ScarpetToWasm(provided.function.callInContext(c, paramAmt, ToLazy(WasmToScarpet(ctx.values))).evalValue(c), ctx.expectedType.outputs).toArray(new Value<?>[0]);
+      });
+
+      return LazyValue.ZERO;
+    });
+  }
+
+  private static void AssertModuleFunctionParams(List<carpet.script.value.Value> params) {
+    if (params.size() < 2 || !(params.get(0) instanceof ModuleValue) || !(params.get(1) instanceof StringValue)) throw new InternalExpressionException("Must provide a module and a function name");
+  }
+
+  public List<Value<?>> ScarpetToWasm(carpet.script.value.Value scarpetArg, WasmType[] inputTypes) {
+    return ScarpetToWasm(List.of(scarpetArg), inputTypes);
   }
 
   public List<Value<?>> ScarpetToWasm(List<carpet.script.value.Value> scarpetArgs, WasmType[] inputTypes) {
@@ -110,7 +124,7 @@ public class Extension implements CarpetExtension {
           break;
 
           default:
-          throw new InternalExpressionException("Calling a function with a non-numeric argument is unsupported");
+          throw new InternalExpressionException("Using a non-numeric wasm type in scarpet is unsupported");
         }
 
         i++;
@@ -120,8 +134,61 @@ public class Extension implements CarpetExtension {
         ret.addAll(ScarpetToWasm(values, ArrayUtils.subarray(inputTypes, i, i + values.size())));
         i += values.size();
       } else {
-        throw new InternalExpressionException("Argument must have a numeric type");
+        throw new InternalExpressionException("Scarpet value must have a numeric type");
       }
+    }
+
+    return ret;
+  }
+
+  public List<carpet.script.value.Value> WasmToScarpet(Value<?>[] values) {
+    return WasmToScarpet(Arrays.asList(values));
+  }
+
+  public List<carpet.script.value.Value> WasmToScarpet(List<Value<?>> values) {
+    List<carpet.script.value.Value> ret = new ArrayList<carpet.script.value.Value>();
+
+    for (Value<?> v : values) {
+      switch (v.type) {
+        case I32:
+        ret.add(NumericValue.of(v.i32()));
+        break;
+
+        case I64:
+        ret.add(NumericValue.of(v.i64()));
+        break;
+
+        case F32:
+        ret.add(NumericValue.of(v.f32()));
+        break;
+
+        case F64:
+        ret.add(NumericValue.of(v.f64()));
+        break;
+
+        default:
+        throw new InternalExpressionException("Using a non-numeric wasm type in scarpet is unsupported");
+      }
+    }
+
+    return ret;
+  }
+
+  private static List<LazyValue> ToLazy(List<carpet.script.value.Value> values) {
+    List<LazyValue> ret = new ArrayList<LazyValue>(values.size());
+
+    for (carpet.script.value.Value value : values) {
+      ret.add((c, t) -> value);
+    }
+
+    return ret;
+  }
+
+  private static List<carpet.script.value.Value> ToValues(List<LazyValue> values, Context c) {
+    List<carpet.script.value.Value> ret = new ArrayList<carpet.script.value.Value>(values.size());
+
+    for (LazyValue value : values) {
+      ret.add(value.evalValue(c));
     }
 
     return ret;

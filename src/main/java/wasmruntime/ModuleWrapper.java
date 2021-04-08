@@ -7,12 +7,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
 import wasmruntime.Enums.WasmType;
 import wasmruntime.Exceptions.WasmtimeException;
 import wasmruntime.Types.FuncType;
 import wasmruntime.Types.Value;
 import wasmruntime.Utils.DetectOS;
+import wasmruntime.Utils.ImportCallCtx;
 import wasmruntime.Utils.NativeUtils;
 
 public class ModuleWrapper {
@@ -23,7 +25,11 @@ public class ModuleWrapper {
   
   public Map<String, FuncType> exportedFunctions = new HashMap<String, FuncType>();
 
+  public Map<String, FuncType> importedFunctions = new HashMap<String, FuncType>();
+
   public Map<String, WasmType> exportedGlobals = new HashMap<String, WasmType>();
+
+  public Map<String, Function<ImportCallCtx, Value<?>[]>> imports = new HashMap<String, Function<ImportCallCtx, Value<?>[]>>();
 
   // <name, default>
   public static Map<String, Value<?>> knownSettings = new HashMap<String, Value<?>>();
@@ -73,7 +79,9 @@ public class ModuleWrapper {
   // Wraps on a module like a day old piece of spaghettttt / Constructor sometimes I think
   public ModuleWrapper(File file, String name) throws IOException, WasmtimeException {
     moduleName = name;
-    InstanceID = LoadModule(file.getAbsolutePath(), moduleName);
+    InstanceID = LoadModule(file.getAbsolutePath(), moduleName, importedFunctions);
+
+    if (!ModuleImports.perModuleImports.containsKey(moduleName)) ModuleImports.perModuleImports.put(moduleName, new HashMap<String, Function<ImportCallCtx, Value<?>[]>>());
     
     for (Entry<String, List<Byte>> entry : Functions(InstanceID).entrySet()) {
       exportedFunctions.put(entry.getKey(), new FuncType(entry.getValue()));
@@ -112,7 +120,7 @@ public class ModuleWrapper {
     UnloadModule(InstanceID);
   }
 
-  private static native long LoadModule(String path, String name) throws WasmtimeException;
+  private static native long LoadModule(String path, String name, Map<String, FuncType> importedFunctions) throws WasmtimeException;
 
   private static native void Init() throws WasmtimeException;
 

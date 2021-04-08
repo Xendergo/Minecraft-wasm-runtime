@@ -43,6 +43,10 @@ public class Value<T extends Number> {
     return new Value<Double>(v, WasmType.F64);
   }
 
+  public int getType() {
+    return type.getNum();
+  }
+
   @Override
   public String toString() {
     return value.toString();
