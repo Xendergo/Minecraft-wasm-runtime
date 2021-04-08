@@ -14,7 +14,7 @@ public class AutoReload extends Thread {
       long currentTime = System.currentTimeMillis();
 
       for (File file : WasmRuntime.configFolder.listFiles()) {
-        if (file.lastModified() - 1000 < currentTime) {
+        if (file.lastModified() + 1000 > currentTime) {
           String moduleName = FilenameUtils.getBaseName(file.getName());
             
           if (!Modules.modules.containsKey(moduleName)) continue;

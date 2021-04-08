@@ -1,5 +1,6 @@
 package wasmruntime.CarpetStuff;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -24,6 +25,7 @@ import wasmruntime.ModuleWrapper;
 import wasmruntime.Modules;
 import wasmruntime.ModuleImports;
 import wasmruntime.Enums.WasmType;
+import wasmruntime.Exceptions.WasmtimeException;
 import wasmruntime.Types.FuncType;
 import wasmruntime.Types.Value;
 import wasmruntime.Utils.ImportCallCtx;
@@ -34,11 +36,41 @@ public class Extension implements CarpetExtension {
     Expression expr = CarpetExpr.getExpr();
 
     expr.addFunction("get_module", (params) -> {
-      if (params.size() == 0 || !(params.get(0) instanceof StringValue)) throw new InternalExpressionException("Must provide a string argument");
+      if (params.size() == 0 || !(params.get(0) instanceof StringValue)) throw new InternalExpressionException("Must provide a module name");
       
       String name = ((StringValue)params.get(0)).getString();
 
       if (!Modules.modules.containsKey(name)) throw new InternalExpressionException("There's no module with that name loaded");
+
+      return new ModuleValue(Modules.modules.get(name));
+    });
+
+    expr.addFunction("load_module", (params) -> {
+      if (params.size() == 0 || !(params.get(0) instanceof StringValue)) throw new InternalExpressionException("Must provide a module name");
+
+      String name = ((StringValue)params.get(0)).getString();
+
+      if (!Modules.modules.containsKey(name)) {
+        try {
+          Modules.LoadModule(name);
+        } catch (IOException | WasmtimeException e) {
+          throw new InternalExpressionException(e.getMessage());
+        }
+      }
+
+      return new ModuleValue(Modules.modules.get(name));
+    });
+
+    expr.addFunction("reload_module", (params) -> {
+      if (params.size() == 0 || !(params.get(0) instanceof StringValue)) throw new InternalExpressionException("Must provide a module name");
+
+      String name = ((StringValue)params.get(0)).getString();
+
+      try {
+        Modules.LoadModule(name);
+      } catch (IOException | WasmtimeException e) {
+        throw new InternalExpressionException(e.getMessage());
+      }
 
       return new ModuleValue(Modules.modules.get(name));
     });

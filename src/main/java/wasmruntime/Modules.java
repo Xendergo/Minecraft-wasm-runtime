@@ -21,6 +21,10 @@ public class Modules {
     modules.put(name, new ModuleWrapper(path, name));
   }
 
+  public static void LoadModule(String name) throws IOException, WasmtimeException {
+    LoadModule(new File(WasmRuntime.configFolder, name + ".wasm"));
+  }
+
   public static void UnloadModule(String name) {
     if (modules.containsKey(name)) {
       modules.get(name).close();
