@@ -16,6 +16,7 @@ thiserror = "1.0.20"
 anyhow = "1.0.31"
 wasi-cap-std-sync = "0.25.0"
 lazy_static = "1.4.0"
+byteorder = "1.4.3"
 
 [profile.dev]
 opt-level = 0

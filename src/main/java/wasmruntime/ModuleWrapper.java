@@ -115,6 +115,10 @@ public class ModuleWrapper {
   public Value<?> GetGlobal(String name) throws WasmtimeException {
     return GetGlobal(InstanceID, name);
   }
+
+  public String ReadString(List<Long> ptr) throws WasmtimeException {
+    return ReadString(InstanceID, ptr);
+  }
   
   public void close() {
     UnloadModule(InstanceID);
@@ -135,4 +139,6 @@ public class ModuleWrapper {
   private static native Map<String, Byte> Globals(long InstancePtr) throws WasmtimeException;
 
   private static native Value<?> GetGlobal(long InstancePtr, String name) throws WasmtimeException;
+
+  private static native String ReadString(long InstancePtr, List<Long> ptr) throws WasmtimeException;
 }

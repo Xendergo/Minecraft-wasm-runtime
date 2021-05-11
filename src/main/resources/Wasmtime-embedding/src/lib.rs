@@ -7,15 +7,18 @@ https://github.com/kawamuray/wasmtime-java
 
 mod errors;
 mod interop;
+mod wasmOptions;
 use jni::{self, JNIEnv};
 use jni::objects::{JClass, JString, JObject, JMap, JList, JValue};
-use jni::sys::{jlong, jobject};
+use jni::sys::{jlong, jobject, jstring};
 use wasmtime::*;
 use wasmtime_wasi::Wasi;
 use wasi_cap_std_sync::WasiCtxBuilder;
-use crate::errors::{Result};
+use crate::errors::{Result, Error};
 use crate::interop::*;
 use std::iter::FromIterator;
+use crate::wasmOptions::*;
+use byteorder::{ByteOrder, LittleEndian};
 
 static mut StorePtr: i64 = 0;
 
@@ -24,8 +27,7 @@ macro_rules! wrap_error {
     match $body {
       Ok(v) => v,
       Err(e) => {
-        println!("{}", e);
-        $env.throw(e).unwrap();
+        let _ = $env.throw(e);
         $default
       }
     }
@@ -103,6 +105,15 @@ pub extern "system" fn Java_wasmruntime_ModuleWrapper_GetGlobal(env: JNIEnv, cla
   )
 }
 
+#[no_mangle]
+pub extern "system" fn Java_wasmruntime_ModuleWrapper_ReadString(env: JNIEnv, class: JClass, InstancePtr: jlong, ptr: JObject) -> jobject {
+  wrap_error!(
+    env,
+    ReadStringJni(env, class, InstancePtr, ptr),
+    JObject::null().into_inner()
+  )
+}
+
 fn Init(_env: JNIEnv, _class: JClass) -> Result<()> {
   let config = Config::default();
   let Store = Store::new(&Engine::new(&config).expect("There was an error generating a new engine"));
@@ -127,6 +138,7 @@ pub fn LoadModule(env: JNIEnv, _class: JClass, path: JString, moduleName: JStrin
   let module = Module::from_file(store!().engine(), path)?;
 
   let mut Linker = Linker::new(store!());
+  Linker.allow_shadowing(true);
   let wasi = Wasi::new(store!(), WasiCtxBuilder::new().inherit_stdio().build()?);
   wasi.add_to_linker(&mut Linker)?;
 
@@ -247,4 +259,47 @@ fn GetGlobal(env: JNIEnv, _class: JClass, InstancePtr: jlong, globalName: JStrin
   let Global = Instance.get_global(&nameString).ok_or("Global doesn't exist")?;
 
   Ok(ValToObj(&env, &Global.get())?.into_inner())
+}
+
+fn ReadStringJni(env: JNIEnv, _class: JClass, InstancePtr: jlong, dataObj: JObject) -> Result<jstring> {
+  let data = env.get_list(dataObj)?;
+
+  let ptr: usize;
+  let len: usize;
+
+  let Instance = &*ref_from_raw::<Instance>(InstancePtr)?;
+
+  match getLanguage(Instance) {
+    Language::AssemblyScript => {
+      ptr = env.call_method(data.get(0)?.unwrap(), "longValue", "()J", &[])?.j()? as usize;
+      let lenBuffer = &mut [0, 0, 0, 0];
+      Instance.get_memory("memory").unwrap().read(ptr - 4, lenBuffer)?;
+      len = LittleEndian::read_u32(lenBuffer) as usize;
+    }
+  }
+
+  let ret = ReadString(Instance, ptr, len)?;
+  Ok(env.new_string(ret)?.into_inner())
+}
+
+fn ReadString(Instance: &Instance, ptr: usize, len: usize) -> Result<String> {
+  let mem = Instance.get_memory("memory").ok_or(Error::String("There's no memory exported named \"name\"".to_string()))?;
+
+  unsafe {
+    let bytes = mem.data_unchecked();
+
+    match getLanguage(Instance) {
+      Language::AssemblyScript => {
+        let mut u16Slice: Vec<u16> = Vec::new();
+
+        for v in 0..len >> 1 {
+          u16Slice.push(LittleEndian::read_u16(bytes.get(ptr + (v << 1)..).ok_or("Pointer is out of range".to_string())?));
+        }
+
+        println!("{:?} {:?}", u16Slice, bytes.get(ptr-4..ptr+100));
+
+        Ok(String::from_utf16(&u16Slice)?)
+      }
+    }
+  }
 }

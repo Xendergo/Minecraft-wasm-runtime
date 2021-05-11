@@ -7,6 +7,9 @@ use jni::{self, JNIEnv};
 use std::io;
 use thiserror::Error;
 use wasi_common::StringArrayError;
+use wasmtime::MemoryAccessError;
+use std::str::Utf8Error;
+use std::string::{FromUtf16Error, FromUtf8Error};
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -27,7 +30,13 @@ pub enum Error {
   #[error("{0}")]
   String(String),
   #[error("StringArrayError: {0}")]
-  StringArrayError(String)
+  StringArrayError(String),
+  #[error("UTF8 error: ")]
+  UTF8Error(String),
+  #[error("UTF16 error: ")]
+  UTF16Error(String),
+  #[error("Memory access error: ")]
+  MemoryAccessError(String),
 }
 
 impl<G> From<std::sync::PoisonError<G>> for Error {
@@ -54,6 +63,30 @@ impl From<StringArrayError> for Error {
   }
 }
 
+impl From<Utf8Error> for Error {
+  fn from(err: Utf8Error) -> Self {
+    Error::UTF8Error(err.to_string())
+  }
+}
+
+impl From<MemoryAccessError> for Error {
+  fn from(err: MemoryAccessError) -> Self {
+    Error::MemoryAccessError(err.to_string())
+  }
+}
+
+impl From<FromUtf16Error> for Error {
+  fn from(err: FromUtf16Error) -> Self {
+    Error::UTF16Error(err.to_string())
+  }
+}
+
+impl From<FromUtf8Error> for Error {
+  fn from(err: FromUtf8Error) -> Self {
+    Error::UTF8Error(err.to_string())
+  }
+}
+
 impl<'a> Desc<'a, JThrowable<'a>> for Error {
   fn lookup(self, env: &JNIEnv<'a>) -> jni::errors::Result<JThrowable<'a>> {
     use Error::*;
@@ -72,11 +105,14 @@ impl<'a> Desc<'a, JThrowable<'a>> for Error {
         }
       }
       Wasmtime(e) => (
-        "Java/wasmruntime/Exceptions/WasmtimeException",
+        "wasmruntime/Exceptions/WasmtimeException",
         e.to_string(),
       ),
-      Io(_) | UnknownEnum(_) | NotImplemented | LockPoison(_) | String(_) | StringArrayError(_) => {
+      Io(_) | NotImplemented | LockPoison(_) | StringArrayError(_) => {
         ("java/lang/RuntimeException", self.to_string())
+      },
+      String(e) | UTF8Error(e) | UnknownEnum(e) | UTF16Error(e) | MemoryAccessError(e) => {
+        ("java/lang/RuntimeException", self.to_string() + e)
       }
     };
 

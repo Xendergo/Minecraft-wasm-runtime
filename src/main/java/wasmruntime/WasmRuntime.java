@@ -84,17 +84,17 @@ public class WasmRuntime implements ModInitializer {
 					System.out.println("Couldn't create wasm.json file");
 				}
 			}
-
-			try {
-				Class.forName("carpet.CarpetExtension");
-
-				CarpetServer.manageExtension(new Extension());
-			} catch (Exception e) {
-
-			}
-
+		
 			Modules.server = server;
 		});
+
+		try {
+			Class.forName("carpet.CarpetExtension");
+
+			CarpetServer.manageExtension(new Extension());
+		} catch (Exception e) {
+
+		}
 
 		ServerLifecycleEvents.SERVER_STOPPING.register((MinecraftServer server) -> {
 			Modules.server = null;

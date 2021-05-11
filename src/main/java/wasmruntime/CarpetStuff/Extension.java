@@ -121,6 +121,21 @@ public class Extension implements CarpetExtension {
 
       return LazyValue.ZERO;
     });
+
+    expr.addFunction("read_string", (params) -> {
+      if (params.size() < 2 || !(params.get(0) instanceof ModuleValue) || !(params.get(1) instanceof ListValue))
+        throw new InternalExpressionException("Must provide a module and string pointer");
+      
+      ModuleWrapper module = ((ModuleValue) params.get(0)).module;
+
+      List<Long> value = ((ListValue) params.get(1)).getItems().stream().map(v -> ((NumericValue)v).getLong()).collect(Collectors.toList());
+
+      try {
+        return new StringValue(module.ReadString(value));
+      } catch (WasmtimeException e) {
+        throw new InternalExpressionException("Wasm trapped: " + e.getMessage());
+      }
+    });
   }
 
   private static void AssertModuleFunctionParams(List<carpet.script.value.Value> params) {
