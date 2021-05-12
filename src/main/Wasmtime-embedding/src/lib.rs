@@ -178,7 +178,7 @@ pub fn UnloadModule(_env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<
 }
 
 pub fn Functions(env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<jobject> {
-  let Instance = &*ref_from_raw::<Instance>(InstancePtr)?;
+  let Instance = &ref_from_raw::<Instance>(InstancePtr)?;
   let exports = Instance.exports();
 
   let mapClass = env.find_class("java/util/HashMap")?;
@@ -196,7 +196,7 @@ pub fn Functions(env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<jobj
 }
 
 pub fn Globals(env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<jobject> {
-  let Instance = &*ref_from_raw::<Instance>(InstancePtr)?;
+  let Instance = &ref_from_raw::<Instance>(InstancePtr)?;
   let exports = Instance::exports(Instance);
 
   let byteClass = env.find_class("java/lang/Byte")?;
@@ -227,7 +227,7 @@ pub fn Globals(env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<jobjec
 }
 
 fn CallFunction(env: JNIEnv, _class: JClass, InstancePtr: jlong, functionName: JString, argsObj: JObject) -> Result<jobject> {
-  let Instance = &*ref_from_raw::<Instance>(InstancePtr)?;
+  let Instance = &ref_from_raw::<Instance>(InstancePtr)?;
   let nameString: String = env.get_string(functionName).expect("Can't load in path string").into();
   let ToCall = Instance.get_func(&nameString).unwrap();
 
@@ -254,7 +254,7 @@ fn CallFunction(env: JNIEnv, _class: JClass, InstancePtr: jlong, functionName: J
 }
 
 fn GetGlobal(env: JNIEnv, _class: JClass, InstancePtr: jlong, globalName: JString) -> Result<jobject> {
-  let Instance = &*ref_from_raw::<Instance>(InstancePtr)?;
+  let Instance = &ref_from_raw::<Instance>(InstancePtr)?;
   let nameString: String = env.get_string(globalName).expect("Can't load in path string").into();
   let Global = Instance.get_global(&nameString).ok_or("Global doesn't exist")?;
 
@@ -267,7 +267,11 @@ fn ReadStringJni(env: JNIEnv, _class: JClass, InstancePtr: jlong, dataObj: JObje
   let ptr: usize;
   let len: usize;
 
-  let Instance = &*ref_from_raw::<Instance>(InstancePtr)?;
+  println!("YEEEE {}", InstancePtr);
+
+  let Instance = &ref_from_raw::<Instance>(InstancePtr)?;
+
+  println!("YEEEE2");
 
   match getLanguage(Instance) {
     Language::AssemblyScript => {
@@ -278,12 +282,18 @@ fn ReadStringJni(env: JNIEnv, _class: JClass, InstancePtr: jlong, dataObj: JObje
     }
   }
 
+  println!("YEEEE3");
+
   let ret = ReadString(Instance, ptr, len)?;
   Ok(env.new_string(ret)?.into_inner())
 }
 
 fn ReadString(Instance: &Instance, ptr: usize, len: usize) -> Result<String> {
+  println!("YEEEE4");
+
   let mem = Instance.get_memory("memory").ok_or(Error::String("There's no memory exported named \"name\"".to_string()))?;
+
+  println!("{}", len);
 
   unsafe {
     let bytes = mem.data_unchecked();

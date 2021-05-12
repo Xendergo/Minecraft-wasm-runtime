@@ -19,6 +19,7 @@ import wasmruntime.Commands.Load;
 import wasmruntime.Commands.Suggestions.ExportedFunctions;
 import wasmruntime.Commands.Suggestions.LoadableModules;
 import wasmruntime.Commands.Suggestions.LoadedModules;
+import wasmruntime.Enums.WasmType;
 import wasmruntime.Exceptions.WasmtimeException;
 import wasmruntime.Imports.Printing;
 import net.minecraft.server.MinecraftServer;
@@ -28,13 +29,11 @@ import static net.minecraft.server.command.CommandManager.*;
 import static com.mojang.brigadier.arguments.StringArgumentType.*;
 
 public class WasmRuntime implements ModInitializer {
-	public static File configFolder;
+	public static final File configFolder = new File("config/wasm");
 	public static AutoReload reloadThread;
 	@Override
 	public void onInitialize() {
 		ServerLifecycleEvents.SERVER_STARTED.register((MinecraftServer server) -> {
-			configFolder = new File(server.getRunDirectory(), "config/wasm");
-
 			reloadThread = new AutoReload();
 			reloadThread.start();
 
@@ -130,6 +129,13 @@ public class WasmRuntime implements ModInitializer {
 
 
 		// Register imports
-		ModuleImports.Register("log", Printing::log);
+		ModuleImports.Register("print", Printing::log);
+		ModuleImports.Register("printString", Printing::logString, (types) -> {
+			for (WasmType type : types) {
+				if (type == WasmType.F32 || type == WasmType.F64) return false;
+			}
+
+			return true;
+		});
 	}
 }

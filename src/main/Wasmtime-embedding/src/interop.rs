@@ -4,8 +4,8 @@ use crate::errors::{Result, Error};
 use jni::objects::{JObject, JValue, JClass, JList};
 use jni::sys::{jlong, jobjectArray};
 use jni::{JNIEnv, JavaVM};
-use std::sync::Mutex;
-use std::sync::MutexGuard;
+use std::sync::RwLock;
+use std::sync::RwLockReadGuard;
 use wasmtime::{Val, ValType, FuncType};
 use crate::errors;
 
@@ -16,18 +16,18 @@ pub fn into_raw<T>(val: T) -> jlong
 where
     T: 'static,
 {
-    Box::into_raw(Box::new(Mutex::new(val))) as jlong
+    Box::into_raw(Box::new(RwLock::new(val))) as jlong
 }
 
 /// Restore a Rust object of type `T` from a pointer.
 /// This is the reverse operation of `into_raw`.
 pub fn from_raw<T>(ptr: jlong) -> Result<T> {
-    Ok((*unsafe { Box::from_raw(ptr as *mut Mutex<T>) }).into_inner()?)
+    Ok((*unsafe { Box::from_raw(ptr as *mut RwLock<T>) }).into_inner()?)
 }
 
-pub fn ref_from_raw<'a, T>(ptr: jlong) -> Result<MutexGuard<'a, T>> {
-    let ptr = ptr as *mut Mutex<T>;
-    Ok(unsafe { (*ptr).lock()? })
+pub fn ref_from_raw<'a, T>(ptr: jlong) -> Result<RwLockReadGuard<'a, T>> {
+    let ptr = ptr as *mut RwLock<T>;
+    Ok(unsafe { (*ptr).read()? })
 }
 
 pub fn ObjToValType(env: &JNIEnv, obj: JObject) -> Result<ValType> {

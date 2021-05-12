@@ -18,7 +18,6 @@ import wasmruntime.Utils.ImportCallCtx;
 import wasmruntime.Utils.NativeUtils;
 
 public class ModuleWrapper {
-  public static final boolean debug = true;
   public String moduleName;
 
   private long InstanceID;
@@ -36,32 +35,27 @@ public class ModuleWrapper {
 
   static {
     try {
-      String fileName = "";
+      String fileName;
 
-      if (debug) {
-        // because I'm a window's simp
-        fileName = "debug/Wasmtime_embedding.dll";
-      } else {
-        // for some reason my naming conventions are all over the place
-        // but that's ok
-        // psssstt... DetectOS is some code that was copied from stackoverflow
-        // duh it has a stack overflow link -xendergo
-        switch (DetectOS.getOperatingSystemType()) {
-          case Windows:
-          fileName = "Wasmtime_embedding.dll";
-          break;
+      // for some reason my naming conventions are all over the place
+      // but that's ok
+      // psssstt... DetectOS is some code that was copied from stackoverflow
+      // duh it has a stack overflow link -xendergo
+      switch (DetectOS.getOperatingSystemType()) {
+        case Windows:
+        fileName = "Wasmtime_embedding.dll";
+        break;
 
-          case MacOS:
-          fileName = "Wasmtime_embedding.dylib";
-          break;
+        case MacOS:
+        fileName = "Wasmtime_embedding.dylib";
+        break;
 
-          case Linux:
-          fileName = "Wasmtime_embedding.so";
-          break;
-          
-          default:
-          throw new RuntimeException("Your OS is unsupported right now");
-        }
+        case Linux:
+        fileName = "Wasmtime_embedding.so";
+        break;
+        
+        default:
+        throw new RuntimeException("Your OS is unsupported right now");
       }
       // Uses the NativeUtils library because dependency's are hard?
       NativeUtils.loadLibraryFromJar("/"+fileName);
@@ -80,6 +74,9 @@ public class ModuleWrapper {
   public ModuleWrapper(File file, String name) throws IOException, WasmtimeException {
     moduleName = name;
     InstanceID = LoadModule(file.getAbsolutePath(), moduleName, importedFunctions);
+
+    System.out.println(InstanceID);
+    System.out.println(file.getAbsolutePath());
 
     if (!ModuleImports.perModuleImports.containsKey(moduleName)) ModuleImports.perModuleImports.put(moduleName, new HashMap<String, Function<ImportCallCtx, Value<?>[]>>());
     
