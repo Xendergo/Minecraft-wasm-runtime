@@ -64,7 +64,7 @@ public class ModuleWrapper {
         }
       }
       // Uses the NativeUtils library because dependency's are hard?
-      NativeUtils.loadLibraryFromJar("/Wasmtime-embedding/target/"+fileName);
+      NativeUtils.loadLibraryFromJar("/"+fileName);
       // Initializes the things?
       Init();
     } catch (WasmtimeException e) {

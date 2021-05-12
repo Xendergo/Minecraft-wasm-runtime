@@ -32,5 +32,5 @@ bin/
 
 run/
 
-src/main/resources/Wasmtime-embedding/target
-src/main/resources/Wasmtime-embedding/Cargo.lock
+src/main/Wasmtime-embedding/target
+src/main/Wasmtime-embedding/Cargo.lock
