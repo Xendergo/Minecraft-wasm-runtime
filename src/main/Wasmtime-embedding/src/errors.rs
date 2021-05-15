@@ -7,7 +7,7 @@ use jni::{self, JNIEnv};
 use std::io;
 use thiserror::Error;
 use wasi_common::StringArrayError;
-use wasmtime::MemoryAccessError;
+use wasmtime::{MemoryAccessError, Trap};
 use std::str::Utf8Error;
 use std::string::{FromUtf16Error, FromUtf8Error};
 
@@ -31,12 +31,14 @@ pub enum Error {
   String(String),
   #[error("StringArrayError: {0}")]
   StringArrayError(String),
-  #[error("UTF8 error: ")]
+  #[error("UTF8 error: {0}")]
   UTF8Error(String),
-  #[error("UTF16 error: ")]
+  #[error("UTF16 error: {0}")]
   UTF16Error(String),
-  #[error("Memory access error: ")]
+  #[error("Memory access error: {0}")]
   MemoryAccessError(String),
+  #[error("Wasm trapped: {0}")]
+  WasmTrap(String)
 }
 
 impl<G> From<std::sync::PoisonError<G>> for Error {
@@ -87,6 +89,12 @@ impl From<FromUtf8Error> for Error {
   }
 }
 
+impl From<Trap> for Error {
+  fn from(err: Trap) -> Self {
+    Error::WasmTrap(err.to_string())
+  }
+}
+
 impl<'a> Desc<'a, JThrowable<'a>> for Error {
   fn lookup(self, env: &JNIEnv<'a>) -> jni::errors::Result<JThrowable<'a>> {
     use Error::*;
@@ -111,7 +119,7 @@ impl<'a> Desc<'a, JThrowable<'a>> for Error {
       Io(_) | NotImplemented | LockPoison(_) | StringArrayError(_) => {
         ("java/lang/RuntimeException", self.to_string())
       },
-      String(e) | UTF8Error(e) | UnknownEnum(e) | UTF16Error(e) | MemoryAccessError(e) => {
+      String(e) | UTF8Error(e) | UnknownEnum(e) | UTF16Error(e) | MemoryAccessError(e) | WasmTrap(e) => {
         ("java/lang/RuntimeException", self.to_string() + e)
       }
     };

@@ -75,9 +75,6 @@ public class ModuleWrapper {
     moduleName = name;
     InstanceID = LoadModule(file.getAbsolutePath(), moduleName, importedFunctions);
 
-    System.out.println(InstanceID);
-    System.out.println(file.getAbsolutePath());
-
     if (!ModuleImports.perModuleImports.containsKey(moduleName)) ModuleImports.perModuleImports.put(moduleName, new HashMap<String, Function<ImportCallCtx, Value<?>[]>>());
     
     for (Entry<String, List<Byte>> entry : Functions(InstanceID).entrySet()) {
@@ -116,6 +113,10 @@ public class ModuleWrapper {
   public String ReadString(List<Long> ptr) throws WasmtimeException {
     return ReadString(InstanceID, ptr);
   }
+
+  public List<Long> NewString(String str) throws WasmtimeException {
+    return NewString(InstanceID, str);
+  }
   
   public void close() {
     UnloadModule(InstanceID);
@@ -138,4 +139,6 @@ public class ModuleWrapper {
   private static native Value<?> GetGlobal(long InstancePtr, String name) throws WasmtimeException;
 
   private static native String ReadString(long InstancePtr, List<Long> ptr) throws WasmtimeException;
+
+  private static native List<Long> NewString(long InstancePtr, String ptr) throws WasmtimeException;
 }

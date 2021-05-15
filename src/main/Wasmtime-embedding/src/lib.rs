@@ -8,17 +8,20 @@ https://github.com/kawamuray/wasmtime-java
 mod errors;
 mod interop;
 mod wasmOptions;
+mod LanguageTrait;
+mod InstanceData;
+mod Languages;
+use crate::InstanceData::InstanceDataStruct;
 use jni::{self, JNIEnv};
 use jni::objects::{JClass, JString, JObject, JMap, JList, JValue};
 use jni::sys::{jlong, jobject, jstring};
 use wasmtime::*;
 use wasmtime_wasi::Wasi;
 use wasi_cap_std_sync::WasiCtxBuilder;
-use crate::errors::{Result, Error};
+use crate::errors::{Result};
 use crate::interop::*;
 use std::iter::FromIterator;
 use crate::wasmOptions::*;
-use byteorder::{ByteOrder, LittleEndian};
 
 static mut StorePtr: i64 = 0;
 
@@ -114,6 +117,15 @@ pub extern "system" fn Java_wasmruntime_ModuleWrapper_ReadString(env: JNIEnv, cl
   )
 }
 
+// #[no_mangle]
+// pub extern "system" fn Java_wasmruntime_ModuleWrapper_NewString(env: JNIEnv, class: JClass, InstancePtr: jlong, ptr: JString) -> jobject {
+//   wrap_error!(
+//     env,
+//     NewStringJni(env, class, InstancePtr, ptr),
+//     JObject::null().into_inner()
+//   )
+// }
+
 fn Init(_env: JNIEnv, _class: JClass) -> Result<()> {
   let config = Config::default();
   let Store = Store::new(&Engine::new(&config).expect("There was an error generating a new engine"));
@@ -166,19 +178,24 @@ pub fn LoadModule(env: JNIEnv, _class: JClass, path: JString, moduleName: JStrin
   }
 
   let instance = Linker.instantiate(&module)?;
+  let langImpl = constructLanguageImpl(getLanguage(&instance));
   
-  let InstancePtr = into_raw::<Instance>(instance);
+  let InstancePtr = into_raw::<InstanceDataStruct>(InstanceDataStruct {
+    instance: instance,
+    langImpl: langImpl
+  });
 
   Ok(InstancePtr)
 }
 
 pub fn UnloadModule(_env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<()> {
-  from_raw::<Instance>(InstancePtr)?;
+  from_raw::<InstanceDataStruct>(InstancePtr)?;
   Ok(())
 }
 
 pub fn Functions(env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<jobject> {
-  let Instance = &ref_from_raw::<Instance>(InstancePtr)?;
+  let InstanceData = &ref_from_raw::<InstanceDataStruct>(InstancePtr)?;
+  let Instance = &InstanceData.instance;
   let exports = Instance.exports();
 
   let mapClass = env.find_class("java/util/HashMap")?;
@@ -196,7 +213,8 @@ pub fn Functions(env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<jobj
 }
 
 pub fn Globals(env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<jobject> {
-  let Instance = &ref_from_raw::<Instance>(InstancePtr)?;
+  let InstanceData = &ref_from_raw::<InstanceDataStruct>(InstancePtr)?;
+  let Instance = &InstanceData.instance;
   let exports = Instance::exports(Instance);
 
   let byteClass = env.find_class("java/lang/Byte")?;
@@ -227,7 +245,8 @@ pub fn Globals(env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<jobjec
 }
 
 fn CallFunction(env: JNIEnv, _class: JClass, InstancePtr: jlong, functionName: JString, argsObj: JObject) -> Result<jobject> {
-  let Instance = &ref_from_raw::<Instance>(InstancePtr)?;
+  let InstanceData = &ref_from_raw::<InstanceDataStruct>(InstancePtr)?;
+  let Instance = &InstanceData.instance;
   let nameString: String = env.get_string(functionName).expect("Can't load in path string").into();
   let ToCall = Instance.get_func(&nameString).unwrap();
 
@@ -254,7 +273,8 @@ fn CallFunction(env: JNIEnv, _class: JClass, InstancePtr: jlong, functionName: J
 }
 
 fn GetGlobal(env: JNIEnv, _class: JClass, InstancePtr: jlong, globalName: JString) -> Result<jobject> {
-  let Instance = &ref_from_raw::<Instance>(InstancePtr)?;
+  let InstanceData = &ref_from_raw::<InstanceDataStruct>(InstancePtr)?;
+  let Instance = &InstanceData.instance;
   let nameString: String = env.get_string(globalName).expect("Can't load in path string").into();
   let Global = Instance.get_global(&nameString).ok_or("Global doesn't exist")?;
 
@@ -264,52 +284,8 @@ fn GetGlobal(env: JNIEnv, _class: JClass, InstancePtr: jlong, globalName: JStrin
 fn ReadStringJni(env: JNIEnv, _class: JClass, InstancePtr: jlong, dataObj: JObject) -> Result<jstring> {
   let data = env.get_list(dataObj)?;
 
-  let ptr: usize;
-  let len: usize;
+  let InstanceData = &ref_from_raw::<InstanceDataStruct>(InstancePtr)?;
+  let Instance = &InstanceData.instance;
 
-  println!("YEEEE {}", InstancePtr);
-
-  let Instance = &ref_from_raw::<Instance>(InstancePtr)?;
-
-  println!("YEEEE2");
-
-  match getLanguage(Instance) {
-    Language::AssemblyScript => {
-      ptr = env.call_method(data.get(0)?.unwrap(), "longValue", "()J", &[])?.j()? as usize;
-      let lenBuffer = &mut [0, 0, 0, 0];
-      Instance.get_memory("memory").unwrap().read(ptr - 4, lenBuffer)?;
-      len = LittleEndian::read_u32(lenBuffer) as usize;
-    }
-  }
-
-  println!("YEEEE3");
-
-  let ret = ReadString(Instance, ptr, len)?;
-  Ok(env.new_string(ret)?.into_inner())
-}
-
-fn ReadString(Instance: &Instance, ptr: usize, len: usize) -> Result<String> {
-  println!("YEEEE4");
-
-  let mem = Instance.get_memory("memory").ok_or(Error::String("There's no memory exported named \"name\"".to_string()))?;
-
-  println!("{}", len);
-
-  unsafe {
-    let bytes = mem.data_unchecked();
-
-    match getLanguage(Instance) {
-      Language::AssemblyScript => {
-        let mut u16Slice: Vec<u16> = Vec::new();
-
-        for v in 0..len >> 1 {
-          u16Slice.push(LittleEndian::read_u16(bytes.get(ptr + (v << 1)..).ok_or("Pointer is out of range".to_string())?));
-        }
-
-        println!("{:?} {:?}", u16Slice, bytes.get(ptr-4..ptr+100));
-
-        Ok(String::from_utf16(&u16Slice)?)
-      }
-    }
-  }
+  Ok(env.new_string(InstanceData.langImpl.ReadString(env, data, Instance)?)?.into_inner())
 }

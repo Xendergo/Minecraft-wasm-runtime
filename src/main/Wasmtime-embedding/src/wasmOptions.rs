@@ -1,3 +1,5 @@
+use crate::Languages::AssemblyScript::AssemblyScriptLang;
+use crate::LanguageTrait::LanguageImpl;
 use wasmtime::*;
 
 #[derive(Debug)]
@@ -19,5 +21,11 @@ pub fn getLanguage(Instance: &Instance) -> Language {
       }
     },
     None => Language::AssemblyScript
+  }
+}
+
+pub fn constructLanguageImpl(language: Language) -> Box<dyn LanguageImpl> {
+  match language {
+    Language::AssemblyScript => Box::new(AssemblyScriptLang {})
   }
 }
