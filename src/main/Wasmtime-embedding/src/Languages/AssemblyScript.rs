@@ -32,7 +32,12 @@ impl AssemblyScriptLang {
   }
 
   fn New(len: i32, ptrType: PtrTypes, Instance: &Instance) -> Result<i32> {
-    let __new = Instance.get_typed_func::<(i32, i32), (i32,)>("__new")?;
+    let __new = match Instance.get_typed_func::<(i32, i32), (i32,)>("__new") {
+      Ok(v) => v,
+      Err(_) => {
+        return Err(Error::String("You must compile with --exportRuntime to allocate things in AssemblyScript's memory".to_string()));
+      }
+    };
 
     Ok(__new.call((len, ptrType.getId()))?.0)
   }

@@ -136,6 +136,19 @@ public class Extension implements CarpetExtension {
         throw new InternalExpressionException("Wasm trapped: " + e.getMessage());
       }
     });
+
+    expr.addFunction("new_string", (params) -> {
+      if (params.size() < 2 || !(params.get(0) instanceof ModuleValue) || !(params.get(1) instanceof StringValue))
+        throw new InternalExpressionException("Must provide a module and string");
+      
+      ModuleWrapper module = ((ModuleValue) params.get(0)).module;
+
+      try {
+        return new ListValue(module.NewString(((StringValue)params.get(1)).getString()).stream().map((v) -> new NumericValue(v)).collect(Collectors.toList()));
+      } catch (WasmtimeException e) {
+        throw new InternalExpressionException("Wasm trapped: " + e.getMessage());
+      }
+    });
   }
 
   private static void AssertModuleFunctionParams(List<carpet.script.value.Value> params) {
@@ -193,7 +206,7 @@ public class Extension implements CarpetExtension {
   }
 
   public List<carpet.script.value.Value> WasmToScarpet(List<Value<?>> values) {
-    List<carpet.script.value.Value> ret = new ArrayList<carpet.script.value.Value>();
+    List<carpet.script.value.Value> ret = new ArrayList<>();
 
     for (Value<?> v : values) {
       switch (v.type) {
@@ -222,7 +235,7 @@ public class Extension implements CarpetExtension {
   }
 
   private static List<LazyValue> ToLazy(List<carpet.script.value.Value> values) {
-    List<LazyValue> ret = new ArrayList<LazyValue>(values.size());
+    List<LazyValue> ret = new ArrayList<>(values.size());
 
     for (carpet.script.value.Value value : values) {
       ret.add((c, t) -> value);
@@ -232,7 +245,7 @@ public class Extension implements CarpetExtension {
   }
 
   private static List<carpet.script.value.Value> ToValues(List<LazyValue> values, Context c) {
-    List<carpet.script.value.Value> ret = new ArrayList<carpet.script.value.Value>(values.size());
+    List<carpet.script.value.Value> ret = new ArrayList<>(values.size());
 
     for (LazyValue value : values) {
       ret.add(value.evalValue(c));

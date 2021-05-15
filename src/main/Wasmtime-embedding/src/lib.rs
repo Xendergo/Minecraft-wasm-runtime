@@ -117,14 +117,14 @@ pub extern "system" fn Java_wasmruntime_ModuleWrapper_ReadString(env: JNIEnv, cl
   )
 }
 
-// #[no_mangle]
-// pub extern "system" fn Java_wasmruntime_ModuleWrapper_NewString(env: JNIEnv, class: JClass, InstancePtr: jlong, ptr: JString) -> jobject {
-//   wrap_error!(
-//     env,
-//     NewStringJni(env, class, InstancePtr, ptr),
-//     JObject::null().into_inner()
-//   )
-// }
+#[no_mangle]
+pub extern "system" fn Java_wasmruntime_ModuleWrapper_NewString(env: JNIEnv, class: JClass, InstancePtr: jlong, ptr: JString) -> jobject {
+  wrap_error!(
+    env,
+    NewStringJni(env, class, InstancePtr, ptr),
+    JObject::null().into_inner()
+  )
+}
 
 fn Init(_env: JNIEnv, _class: JClass) -> Result<()> {
   let config = Config::default();
@@ -275,7 +275,7 @@ fn CallFunction(env: JNIEnv, _class: JClass, InstancePtr: jlong, functionName: J
 fn GetGlobal(env: JNIEnv, _class: JClass, InstancePtr: jlong, globalName: JString) -> Result<jobject> {
   let InstanceData = &ref_from_raw::<InstanceDataStruct>(InstancePtr)?;
   let Instance = &InstanceData.instance;
-  let nameString: String = env.get_string(globalName).expect("Can't load in path string").into();
+  let nameString: String = env.get_string(globalName)?.into();
   let Global = Instance.get_global(&nameString).ok_or("Global doesn't exist")?;
 
   Ok(ValToObj(&env, &Global.get())?.into_inner())
@@ -288,4 +288,13 @@ fn ReadStringJni(env: JNIEnv, _class: JClass, InstancePtr: jlong, dataObj: JObje
   let Instance = &InstanceData.instance;
 
   Ok(env.new_string(InstanceData.langImpl.ReadString(env, data, Instance)?)?.into_inner())
+}
+
+fn NewStringJni(env: JNIEnv, _class: JClass, InstancePtr: jlong, string: JString) -> Result<jobject> {
+  let data: String = env.get_string(string)?.into();
+
+  let InstanceData = &ref_from_raw::<InstanceDataStruct>(InstancePtr)?;
+  let Instance = &InstanceData.instance;
+
+  Ok(InstanceData.langImpl.NewString(env, data, Instance)?)
 }
