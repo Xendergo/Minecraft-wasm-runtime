@@ -7,12 +7,9 @@ Wasm runtime is a mod that executes webassembly modules within minecraft using w
 Since wasmtime is written in rust, to use it, I have to write a native library in rust, which I have to compile to specific platforms.
 
 * Windows
-* Linux*
-* Mac**
+* Linux
 
-<sub>*only tested on ubuntu</sub>
-<br />
-<sub>**Compiled for Intel x86_64</sub>
+<sub>wasmtime doesn't like cross compiling, and I don't have a mac, so I have to wait for my friend....</sub>
 
 ## Stuff to do
 ### Minecraft API

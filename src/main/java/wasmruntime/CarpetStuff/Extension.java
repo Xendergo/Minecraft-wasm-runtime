@@ -156,7 +156,7 @@ public class Extension implements CarpetExtension {
   }
 
   public List<Value<?>> ScarpetToWasm(carpet.script.value.Value scarpetArg, WasmType[] inputTypes) {
-    return ScarpetToWasm(List.of(scarpetArg), inputTypes);
+    return ScarpetToWasm(Arrays.asList(scarpetArg), inputTypes);
   }
 
   public List<Value<?>> ScarpetToWasm(List<carpet.script.value.Value> scarpetArgs, WasmType[] inputTypes) {

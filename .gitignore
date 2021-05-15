@@ -34,3 +34,4 @@ run/
 
 src/main/Wasmtime-embedding/target
 src/main/Wasmtime-embedding/Cargo.lock
+src/main/resources/Wasmtime_embedding.dll

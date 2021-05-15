@@ -61,7 +61,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 task releaseRust(type: Exec) {
-	workingDir 'src/main/resources/Wasmtime-embedding'
+	workingDir 'src/main/Wasmtime-embedding'
 
 	commandLine 'cargo', 'build', '--release', '--target', 'x86_64-pc-windows-gnu'
 	// cargo build --release --target x86_64-unknown-linux-gnu
