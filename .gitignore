@@ -39,9 +39,5 @@ run/
 
 src/main/Wasmtime-embedding/target
 src/main/Wasmtime-embedding/Cargo.lock
-src/main/resources/Wasmtime_embedding.dll
-src/main/resources/Wasmtime_embedding.so
-src/main/resources/Wasmtime_embedding.dylib
-src/main/resources/libWasmtime_embedding.dll
-src/main/resources/libWasmtime_embedding.so
-src/main/resources/libWasmtime_embedding.dylib
+src/main/resources/Wasmtime_embedding.*
+src/main/resources/libWasmtime_embedding.*
