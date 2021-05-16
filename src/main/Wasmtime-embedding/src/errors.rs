@@ -119,8 +119,8 @@ impl<'a> Desc<'a, JThrowable<'a>> for Error {
       Io(_) | NotImplemented | LockPoison(_) | StringArrayError(_) => {
         ("java/lang/RuntimeException", self.to_string())
       },
-      String(_e) | UTF8Error(_e) | UnknownEnum(_e) | UTF16Error(_e) | MemoryAccessError(_e) | WasmTrap(_e) => {
-        ("java/lang/RuntimeException", self.to_string())
+      String(e) | UTF8Error(e) | UnknownEnum(e) | UTF16Error(e) | MemoryAccessError(e) | WasmTrap(e) => {
+        ("java/lang/RuntimeException", self.to_string() + e)
       }
     };
 
