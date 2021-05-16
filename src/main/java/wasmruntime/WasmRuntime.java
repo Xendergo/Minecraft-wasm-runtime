@@ -12,6 +12,7 @@ import carpet.CarpetServer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.lib.gson.JsonReader;
 import wasmruntime.CarpetStuff.Extension;
 import wasmruntime.Commands.Invoke;
@@ -87,12 +88,8 @@ public class WasmRuntime implements ModInitializer {
 			Modules.server = server;
 		});
 
-		try {
-			Class.forName("carpet.CarpetExtension");
-
-			CarpetServer.manageExtension(new Extension());
-		} catch (Exception e) {
-
+		if (FabricLoader.getInstance().isModLoaded("carpet")) {
+			Extension.LoadExtension();
 		}
 
 		ServerLifecycleEvents.SERVER_STOPPING.register((MinecraftServer server) -> {

@@ -46,9 +46,9 @@ public class ModuleWrapper {
         fileName = "Wasmtime_embedding.dll";
         break;
 
-        // case MacOS:
-        // fileName = "Wasmtime_embedding.dylib";
-        // break;
+        case MacOS:
+        fileName = "Wasmtime_embedding.dylib";
+        break;
 
         case Linux:
         fileName = "Wasmtime_embedding.so";

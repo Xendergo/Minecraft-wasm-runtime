@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
 
 import carpet.CarpetExtension;
+import carpet.CarpetServer;
 import carpet.script.CarpetExpression;
 import carpet.script.Context;
 import carpet.script.Expression;
@@ -31,6 +32,10 @@ import wasmruntime.Types.Value;
 import wasmruntime.Utils.ImportCallCtx;
 
 public class Extension implements CarpetExtension {
+  public static void LoadExtension() {
+    CarpetServer.manageExtension(new Extension());
+  }
+
   @Override
   public void scarpetApi(CarpetExpression CarpetExpr) {
     Expression expr = CarpetExpr.getExpr();
