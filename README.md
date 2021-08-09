@@ -1,4 +1,5 @@
 # Wasm runtime
+NOTE: I'm most likely not going to continue working on this, I've come up with plans for a different, more powerful language, designed to be embedded in other programs, as well as being nicer for beginners
 
 ## Wuts this?
 Wasm runtime is a mod that executes webassembly modules within minecraft using wasmtime
