@@ -1,10 +1,10 @@
 plugins {
-	id 'fabric-loom' version '0.5-SNAPSHOT'
+	id 'fabric-loom' version '0.10-SNAPSHOT'
 	id 'maven-publish'
 }
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
 
 archivesBaseName = project.archives_base_name
 version = project.mod_version
@@ -30,7 +30,7 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	modCompile "carpet:fabric-carpet:${project.minecraft_version}-1.4.30+v210331"
+	modImplementation "carpet:fabric-carpet:${project.carpet_core_version}"
 
 	// PSA: Some older mods, compiled on Loom 0.2.1, might have outdated Maven POMs.
 	// You may need to force-disable transitiveness on them.

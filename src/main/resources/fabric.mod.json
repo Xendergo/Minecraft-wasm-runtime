@@ -1,34 +1,30 @@
 {
-  "schemaVersion": 1,
-  "id": "wasmruntime",
-  "version": "${version}",
+    "schemaVersion": 1,
+    "id": "wasmruntime",
+    "version": "${version}",
 
-  "name": "Minecraft wasm runtime",
-  "description": "Make custom plugins for minecraft using any language that can compile to wasm",
-  "authors": [
-    "Xendergo"
-  ],
-  "contact": {
-    "homepage": "https://github.com/Xendergo/Minecraft-wasm-runtime",
-    "sources": "https://github.com/Xendergo/Minecraft-wasm-runtime"
-  },
+    "name": "Minecraft wasm runtime",
+    "description": "Make custom plugins for minecraft using any language that can compile to wasm",
+    "authors": ["Xendergo"],
+    "contact": {
+        "homepage": "https://github.com/Xendergo/Minecraft-wasm-runtime",
+        "sources": "https://github.com/Xendergo/Minecraft-wasm-runtime"
+    },
 
-  "license": "CC0-1.0",
-  "icon": "assets/wasm_runtime/icon.png",
+    "license": "CC0-1.0",
+    "icon": "assets/wasm_runtime/icon.png",
 
-  "environment": "*",
-  "entrypoints": {
-    "main": [
-      "wasmruntime.WasmRuntime"
-    ]
-  },
+    "environment": "*",
+    "entrypoints": {
+        "main": ["wasmruntime.WasmRuntime"]
+    },
 
-  "depends": {
-    "fabricloader": ">=0.7.4",
-    "fabric": "*",
-    "minecraft": "1.16.x"
-  },
-  "suggests": {
-    "carpet": "1.4.30"
-  }
+    "depends": {
+        "fabricloader": ">=0.7.4",
+        "fabric": "*",
+        "minecraft": "1.18.x"
+    },
+    "suggests": {
+        "carpet": "1.4.56"
+    }
 }

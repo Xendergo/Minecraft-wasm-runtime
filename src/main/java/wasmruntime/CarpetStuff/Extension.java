@@ -16,6 +16,7 @@ import carpet.script.CarpetExpression;
 import carpet.script.Context;
 import carpet.script.Expression;
 import carpet.script.LazyValue;
+import carpet.script.Context;
 import carpet.script.argument.FunctionArgument;
 import carpet.script.exception.InternalExpressionException;
 import carpet.script.value.FunctionValue;
@@ -105,8 +106,7 @@ public class Extension implements CarpetExtension {
       return ListValue.wrap(WasmToScarpet(ret));
     });
 
-    expr.addLazyFunction("provide_import", -1, (c, i, paramsOof) -> {
-      List<carpet.script.value.Value> params = ToValues(paramsOof, c);
+    expr.addContextFunction("provide_import", -1, (c, i, params) -> {
       int paramAmt = params.size();
       if (paramAmt < 3) throw new InternalExpressionException("Must provide a wasm module, a function name, & a scarpet function to call back");
 
@@ -114,17 +114,17 @@ public class Extension implements CarpetExtension {
 
       if (!(params.get(2) instanceof StringValue || params.get(2) instanceof FunctionValue)) throw new InternalExpressionException("Must provide a scarpet function or function name");
 
-      FunctionArgument<LazyValue> provided = FunctionArgument.findIn(c, expr.module, paramsOof, 2, false, false);
+      FunctionArgument provided = FunctionArgument.findIn(c, expr.module, params, 2, false, false);
 
       ModuleWrapper module = ((ModuleValue)params.get(0)).module;
 
       if (!ModuleImports.perModuleImports.containsKey(module.moduleName)) ModuleImports.perModuleImports.put(module.moduleName, new HashMap<String, Function<ImportCallCtx, Value<?>[]>>());
 
       ModuleImports.perModuleImports.get(module.moduleName).put(((StringValue)params.get(1)).getString(), (ctx) -> {
-        return ScarpetToWasm(provided.function.callInContext(c, paramAmt, ToLazy(WasmToScarpet(ctx.values))).evalValue(c), ctx.expectedType.outputs).toArray(new Value<?>[0]);
+        return ScarpetToWasm(provided.function.callInContext(c, Context.Type.NONE, WasmToScarpet(ctx.values)).evalValue(c), ctx.expectedType.outputs).toArray(new Value<?>[0]);
       });
 
-      return LazyValue.ZERO;
+      return new NumericValue(0);
     });
 
     expr.addFunction("read_string", (params) -> {
@@ -239,23 +239,23 @@ public class Extension implements CarpetExtension {
     return ret;
   }
 
-  private static List<LazyValue> ToLazy(List<carpet.script.value.Value> values) {
-    List<LazyValue> ret = new ArrayList<>(values.size());
+  // private static List<LazyValue> ToLazy(List<carpet.script.value.Value> values) {
+  //   List<LazyValue> ret = new ArrayList<>(values.size());
 
-    for (carpet.script.value.Value value : values) {
-      ret.add((c, t) -> value);
-    }
+  //   for (carpet.script.value.Value value : values) {
+  //     ret.add((c, t) -> value);
+  //   }
 
-    return ret;
-  }
+  //   return ret;
+  // }
 
-  private static List<carpet.script.value.Value> ToValues(List<LazyValue> values, Context c) {
-    List<carpet.script.value.Value> ret = new ArrayList<>(values.size());
+  // private static List<carpet.script.value.Value> ToValues(List<LazyValue> values, Context c) {
+  //   List<carpet.script.value.Value> ret = new ArrayList<>(values.size());
 
-    for (LazyValue value : values) {
-      ret.add(value.evalValue(c));
-    }
+  //   for (LazyValue value : values) {
+  //     ret.add(value.evalValue(c));
+  //   }
 
-    return ret;
-  }
+  //   return ret;
+  // }
 }

@@ -12,7 +12,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.lib.gson.JsonReader;
+import net.fabricmc.loader.impl.lib.gson.JsonReader;
 import wasmruntime.CarpetStuff.Extension;
 import wasmruntime.Commands.Invoke;
 import wasmruntime.Commands.Load;
@@ -44,7 +44,7 @@ public class WasmRuntime implements ModInitializer {
 					FileReader reader = new FileReader(file);
 
 					JsonReader jsonReader = new JsonReader(reader);
-					List<String> modulesPaths = new ArrayList<String>();
+					List<String> modulesPaths = new ArrayList<>();
 
 					try {
 						jsonReader.beginArray();
@@ -62,9 +62,7 @@ public class WasmRuntime implements ModInitializer {
 						try {
 							File module = new File(configFolder, modulePath + ".wasm");
 							Modules.LoadModule(module);
-						} catch (IOException e) {
-							e.printStackTrace();
-						} catch (WasmtimeException e) {
+						} catch (IOException | WasmtimeException e) {
 							e.printStackTrace();
 						}
 					}

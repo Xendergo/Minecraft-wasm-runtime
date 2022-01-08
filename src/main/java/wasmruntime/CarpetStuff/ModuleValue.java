@@ -1,8 +1,8 @@
 package wasmruntime.CarpetStuff;
 
 import carpet.script.value.Value;
-import net.minecraft.nbt.StringTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtString;
 import wasmruntime.ModuleWrapper;
 
 public class ModuleValue extends Value {
@@ -23,8 +23,8 @@ public class ModuleValue extends Value {
   }
 
   @Override
-  public Tag toTag(boolean force) {
-    return StringTag.of(getString());
+  public NbtElement toTag(boolean force) {
+    return NbtString.of(getString());
   }
 
   @Override
