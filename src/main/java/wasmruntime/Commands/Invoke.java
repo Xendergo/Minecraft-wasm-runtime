@@ -63,7 +63,7 @@ public class Invoke {
     List<Value<?>> output;
 
     try {
-		  output = module.CallFunction(functionName, stack);
+		  output = module.CallExport(functionName, stack);
     } catch (WasmtimeException e) {
       throw new SimpleCommandExceptionType(new LiteralText(e.getMessage())).create();
     } catch (Exception e) {

@@ -1,300 +1,252 @@
-#![allow(non_snake_case)]
-#![allow(non_upper_case_globals)]
 /*
 wasmtime-java was a very helpful reference in writing this
 https://github.com/kawamuray/wasmtime-java
 */
 
 mod errors;
-mod interop;
-mod wasmOptions;
-mod LanguageTrait;
-mod InstanceData;
-mod Languages;
-use crate::InstanceData::InstanceDataStruct;
+mod java_interface;
+mod module;
+
+use crate::errors::Result;
+use crate::java_interface::*;
+use errors::Error;
+use jni::objects::{JList, JMap, JObject, JString, JValue};
+use jni::sys::{jlong, jobject};
 use jni::{self, JNIEnv};
-use jni::objects::{JClass, JString, JObject, JMap, JList, JValue};
-use jni::sys::{jlong, jobject, jstring};
-use wasmtime::*;
-use wasmtime_wasi::Wasi;
-use wasi_cap_std_sync::WasiCtxBuilder;
-use crate::errors::{Result};
-use crate::interop::*;
+use module::Module;
+use once_cell::sync::Lazy;
+use std::collections::HashMap;
 use std::iter::FromIterator;
-use crate::wasmOptions::*;
+use std::sync::RwLock;
+use wasmtime::*;
+use wasmtime_wasi::WasiCtxBuilder;
 
-static mut StorePtr: i64 = 0;
+static MODULES: Lazy<RwLock<HashMap<i64, Module>>> = Lazy::new(|| RwLock::new(HashMap::new()));
 
-macro_rules! wrap_error {
-  ($env:expr, $body:expr, $default:expr) => {
-    match $body {
-      Ok(v) => v,
-      Err(e) => {
-        let _ = $env.throw(e);
-        $default
-      }
+pub fn load_module(
+    env: JNIEnv,
+    path: JString,
+    module_name: JString,
+    j_imports_obj: JObject,
+) -> Result<jlong> {
+    let path: String = env.get_string(path)?.into();
+
+    let mut store = Store::new(
+        &Engine::default(),
+        WasiCtxBuilder::new()
+            .inherit_stdio()
+            .inherit_args()
+            .unwrap()
+            .build(),
+    );
+
+    let module = wasmtime::Module::from_file(store.engine(), path)?;
+    let mut linker = Linker::new(store.engine());
+
+    let imports = module.imports();
+
+    let func_type_class = env.find_class("wasmruntime/Types/FuncType")?;
+    let j_imports = env.get_map(j_imports_obj)?;
+
+    for import in imports {
+        let jvm = env.get_java_vm()?;
+        let name = String::from(import.name().unwrap());
+
+        // Only do imports dynamically for functions that are supposed to be
+        if name.starts_with("__dynamic_") {
+            let module_name_rs: String = env.get_string(module_name)?.into();
+
+            match import.ty() {
+                ExternType::Func(ty) => {
+                    let func =
+                        Func::new(
+                            &mut store,
+                            ty,
+                            move |_caller, params, results| match call_import(
+                                &jvm,
+                                params,
+                                &name,
+                                &module_name_rs,
+                                results,
+                            ) {
+                                Ok(_) => Ok(()),
+                                Err(e) => Err(Trap::new(e.to_string())),
+                            },
+                        );
+
+                    linker.define(import.module(), import.name().unwrap(), Extern::Func(func))?;
+
+                    j_imports.put(
+                        *env.new_string(String::from(import.name().unwrap()))?,
+                        env.call_static_method(
+                            func_type_class,
+                            "FromList",
+                            "(Ljava/util/List;)Lwasmruntime/Types/FuncType;",
+                            &[JValue::Object(func_type_to_bytes(
+                                env,
+                                import.ty().unwrap_func().clone(),
+                            )?)],
+                        )?
+                        .l()?,
+                    )?;
+                }
+
+                _ => return Err(Error::NotImplemented),
+            }
+        }
     }
-  };
+
+    wasmtime_wasi::add_to_linker(&mut linker, |wasi| wasi)?;
+
+    let instance = linker.instantiate(&mut store, &module)?;
+
+    let mut modules = MODULES.try_write()?;
+
+    let key = modules.keys().fold(
+        i64::MIN,
+        |max, current| if max < *current { *current } else { max },
+    ) + 1;
+
+    modules.insert(key, Module::new(instance, module, store));
+
+    Ok(key)
 }
 
-macro_rules! store {
-  () => {
-    unsafe {
-      &*ref_from_raw::<Store>(StorePtr)?
+pub fn unload_module(module_id: jlong) -> Result<()> {
+    MODULES.try_write()?.remove(&module_id);
+    Ok(())
+}
+
+pub fn exported_functions(env: JNIEnv, module_id: jlong) -> Result<jobject> {
+    let modules = MODULES.try_read()?;
+
+    let module = &modules
+        .get(&module_id)
+        .ok_or(Error::ModuleDoesntExist)?
+        .module;
+
+    let map_class = env.find_class("java/util/HashMap")?;
+
+    let ret = JMap::from_env(&env, env.new_object(map_class, "()V", &[])?)?;
+
+    let exports = module.exports();
+
+    for func in exports {
+        if let ExternType::Func(v) = func.ty() {
+            ret.put(*env.new_string(func.name())?, func_type_to_bytes(env, v)?)?;
+        }
     }
-  };
+
+    Ok(ret.into_inner())
 }
 
-#[no_mangle]
-pub extern "system" fn Java_wasmruntime_ModuleWrapper_Init(env: JNIEnv, class: JClass) {
-  wrap_error!(
-    env,
-    Init(env, class),
-    Default::default()
-  )
-}
+pub fn globals(env: JNIEnv, module_id: jlong) -> Result<jobject> {
+    let modules = MODULES.try_read()?;
 
-#[no_mangle]
-pub extern "system" fn Java_wasmruntime_ModuleWrapper_LoadModule(env: JNIEnv, class: JClass, path: JString, moduleName: JString, jImports: JObject) -> jlong {
-  wrap_error!(
-    env,
-    LoadModule(env, class, path, moduleName, jImports),
-    Default::default()
-  )
-}
+    let module = &modules
+        .get(&module_id)
+        .ok_or(Error::ModuleDoesntExist)?
+        .module;
 
-#[no_mangle]
-pub extern "system" fn Java_wasmruntime_ModuleWrapper_UnloadModule(env: JNIEnv, class: JClass, InstancePtr: jlong) {
-  wrap_error!(
-    env,
-    UnloadModule(env, class, InstancePtr),
-    Default::default()
-  )
-}
+    let exports = module.exports();
 
-#[no_mangle]
-pub extern "system" fn Java_wasmruntime_ModuleWrapper_Functions(env: JNIEnv, class: JClass, InstancePtr: jlong) -> jobject {
-  wrap_error!(
-    env,
-    Functions(env, class, InstancePtr),
-    JObject::null().into_inner()
-  )
-}
+    let byte_class = env.find_class("java/lang/Byte")?;
+    let map_class = env.find_class("java/util/HashMap")?;
 
-#[no_mangle]
-pub extern "system" fn Java_wasmruntime_ModuleWrapper_Globals(env: JNIEnv, class: JClass, InstancePtr: jlong) -> jobject {
-  wrap_error!(
-    env,
-    Globals(env, class, InstancePtr),
-    JObject::null().into_inner()
-  )
-}
+    let ret = JMap::from_env(&env, env.new_object(map_class, "()V", &[])?)?;
 
-#[no_mangle]
-pub extern "system" fn Java_wasmruntime_ModuleWrapper_CallFunction(env: JNIEnv, class: JClass, InstancePtr: jlong, str: JString, args: JObject) -> jobject {
-  wrap_error!(
-    env,
-    CallFunction(env, class, InstancePtr, str, args),
-    JObject::null().into_inner()
-  )
-}
+    for global in exports {
+        if let ExternType::Global(v) = global.ty() {
+            let to_add = env.new_object(
+                byte_class,
+                "(B)V",
+                &[JValue::Byte(match v.content() {
+                    ValType::I32 => 0,
+                    ValType::I64 => 1,
+                    ValType::F32 => 2,
+                    ValType::F64 => 3,
+                    ValType::V128 => 4,
+                    ValType::ExternRef => 5,
+                    ValType::FuncRef => 6,
+                })],
+            )?;
 
-#[no_mangle]
-pub extern "system" fn Java_wasmruntime_ModuleWrapper_GetGlobal(env: JNIEnv, class: JClass, InstancePtr: jlong, str: JString) -> jobject {
-  wrap_error!(
-    env,
-    GetGlobal(env, class, InstancePtr, str),
-    JObject::null().into_inner()
-  )
-}
-
-#[no_mangle]
-pub extern "system" fn Java_wasmruntime_ModuleWrapper_ReadString(env: JNIEnv, class: JClass, InstancePtr: jlong, ptr: JObject) -> jobject {
-  wrap_error!(
-    env,
-    ReadStringJni(env, class, InstancePtr, ptr),
-    JObject::null().into_inner()
-  )
-}
-
-#[no_mangle]
-pub extern "system" fn Java_wasmruntime_ModuleWrapper_NewString(env: JNIEnv, class: JClass, InstancePtr: jlong, ptr: JString) -> jobject {
-  wrap_error!(
-    env,
-    NewStringJni(env, class, InstancePtr, ptr),
-    JObject::null().into_inner()
-  )
-}
-
-fn Init(_env: JNIEnv, _class: JClass) -> Result<()> {
-  let config = Config::default();
-  let Store = Store::new(&Engine::new(&config).expect("There was an error generating a new engine"));
-
-  assert!(Wasi::set_context(
-    &Store,
-    WasiCtxBuilder::new()
-      .inherit_stdio()
-      .inherit_args()?
-      .build()?
-    )
-  .is_ok());
-
-  unsafe {
-    StorePtr = into_raw::<Store>(Store);
-  }
-  Ok(())
-}
-
-pub fn LoadModule(env: JNIEnv, _class: JClass, path: JString, moduleName: JString, jImportsObj: JObject) -> Result<jlong> {
-  let path: String = env.get_string(path)?.into();
-  let module = Module::from_file(store!().engine(), path)?;
-
-  let mut Linker = Linker::new(store!());
-  Linker.allow_shadowing(true);
-  let wasi = Wasi::new(store!(), WasiCtxBuilder::new().inherit_stdio().build()?);
-  wasi.add_to_linker(&mut Linker)?;
-
-  let imports = module.imports();
-
-  let funcTypeClass = env.find_class("wasmruntime/Types/FuncType")?;
-
-  let jImports = env.get_map(jImportsObj)?;
-
-  for import in imports {
-    let jvm = env.get_java_vm()?;
-    let name = String::from(import.name().unwrap());
-    let moduleName2 = env.get_string(moduleName)?.into();
-    let ty = import.ty().unwrap_func().clone();
-    let func = Func::new(store!(), ty, move |_caller, params, results| {
-      match CallImport(&jvm, params, &name, &moduleName2, results) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(Trap::new(e.to_string()))
-      }
-    });
-
-    Linker.define(import.module(), import.name().unwrap(), Extern::Func(func))?;
-
-    jImports.put(*env.new_string(String::from(import.name().unwrap()))?, env.call_static_method(funcTypeClass, "FromList", "(Ljava/util/List;)Lwasmruntime/Types/FuncType;", &[JValue::Object(FuncTypeToBytes(env, import.ty().unwrap_func().clone())?)])?.l()?)?;
-  }
-
-  let instance = Linker.instantiate(&module)?;
-  let langImpl = constructLanguageImpl(getLanguage(&instance));
-  
-  let InstancePtr = into_raw::<InstanceDataStruct>(InstanceDataStruct {
-    instance: instance,
-    langImpl: langImpl
-  });
-
-  Ok(InstancePtr)
-}
-
-pub fn UnloadModule(_env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<()> {
-  from_raw::<InstanceDataStruct>(InstancePtr)?;
-  Ok(())
-}
-
-pub fn Functions(env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<jobject> {
-  let InstanceData = &ref_from_raw::<InstanceDataStruct>(InstancePtr)?;
-  let Instance = &InstanceData.instance;
-  let exports = Instance.exports();
-
-  let mapClass = env.find_class("java/util/HashMap")?;
-
-  let ret = JMap::from_env(&env, env.new_object(mapClass, "()V", &[])?)?;
-  
-  for func in exports {
-    match func.ty() {
-      ExternType::Func(v) => {ret.put(*env.new_string(func.name())?, FuncTypeToBytes(env, v)?)?;},
-      _ => {}
+            ret.put(*env.new_string(global.name())?, to_add)?;
+        }
     }
-  }
 
-  Ok(ret.into_inner())
+    Ok(ret.into_inner())
 }
 
-pub fn Globals(env: JNIEnv, _class: JClass, InstancePtr: jlong) -> Result<jobject> {
-  let InstanceData = &ref_from_raw::<InstanceDataStruct>(InstancePtr)?;
-  let Instance = &InstanceData.instance;
-  let exports = Instance::exports(Instance);
+fn call_export(
+    env: JNIEnv,
+    module_id: jlong,
+    function_name: JString,
+    args_obj: JObject,
+) -> Result<jobject> {
+    let mut modules = MODULES.try_write()?;
 
-  let byteClass = env.find_class("java/lang/Byte")?;
-  let mapClass = env.find_class("java/util/HashMap")?;
+    let module = modules
+        .get_mut(&module_id)
+        .ok_or(Error::ModuleDoesntExist)?;
 
-  let ret = JMap::from_env(&env, env.new_object(mapClass, "()V", &[])?)?;
-  
-  for global in exports {
-    match global.ty() {
-      ExternType::Global(v) => {        
-        let toAdd = env.new_object(byteClass, "(B)V", &[JValue::Byte(match v.content() {
-          ValType::I32 => 0,
-          ValType::I64 => 1,
-          ValType::F32 => 2,
-          ValType::F64 => 3,
-          ValType::V128 => 4,
-          ValType::ExternRef => 5,
-          ValType::FuncRef => 6
-        })])?;
+    let name_string: String = env
+        .get_string(function_name)
+        .expect("Can't load in path string")
+        .into();
 
-        ret.put(*env.new_string(global.name())?, toAdd)?;
-      }
-      _ => {}
+    let to_call = module
+        .instance
+        .get_func(&mut module.store, &name_string)
+        .unwrap();
+
+    let ty = to_call.ty(&module.store);
+
+    let params_types = Vec::from_iter(ty.params());
+
+    let args = env.get_list(args_obj)?;
+
+    let mut params = Vec::new();
+
+    for i in 0..params_types.len() {
+        params.push(obj_to_val(
+            &env,
+            args.get(i as i32)?.ok_or("Input param must not be null")?,
+            params_types.get(i).ok_or("Input type must not be null")?,
+        )?)
     }
-  }
 
-  Ok(ret.into_inner())
+    let mut results = Vec::new();
+
+    for _ in ty.results() {
+        results.push(Val::I32(0))
+    }
+
+    to_call.call(&mut module.store, &params, &mut results)?;
+
+    let list_class = env.find_class("java/util/ArrayList")?;
+    let ret = JList::from_env(&env, env.new_object(list_class, "()V", &[])?)?;
+
+    for val in results.iter() {
+        ret.add(val_to_obj(&env, val)?)?;
+    }
+
+    Ok(ret.into_inner())
 }
 
-fn CallFunction(env: JNIEnv, _class: JClass, InstancePtr: jlong, functionName: JString, argsObj: JObject) -> Result<jobject> {
-  let InstanceData = &ref_from_raw::<InstanceDataStruct>(InstancePtr)?;
-  let Instance = &InstanceData.instance;
-  let nameString: String = env.get_string(functionName).expect("Can't load in path string").into();
-  let ToCall = Instance.get_func(&nameString).unwrap();
+fn get_global(env: JNIEnv, module_id: jlong, global_name: JString) -> Result<jobject> {
+    let mut modules = MODULES.try_write()?;
 
-  let paramsTypes = Vec::from_iter(ToCall.ty().params());
+    let module = modules
+        .get_mut(&module_id)
+        .ok_or(Error::ModuleDoesntExist)?;
 
-  let args = env.get_list(argsObj)?;
+    let name_string: String = env.get_string(global_name)?.into();
 
-  let mut params = Vec::new();
+    let global = module
+        .instance
+        .get_global(&mut module.store, &name_string)
+        .ok_or("Global doesn't exist")?;
 
-  for i in 0..paramsTypes.len() {
-    params.push(ObjToVal(&env, args.get(i as i32)?.ok_or("Input param must not be null")?, paramsTypes.get(i).ok_or("Input type must not be null")?)?)
-  }
-
-  let res = ToCall.call(&params)?;
-
-  let listClass = env.find_class("java/util/ArrayList")?;
-  let ret = JList::from_env(&env, env.new_object(listClass, "()V", &[])?)?;
-
-  for val in res.iter() {
-    ret.add(ValToObj(&env, val)?)?;
-  }
-
-  Ok(ret.into_inner())
-}
-
-fn GetGlobal(env: JNIEnv, _class: JClass, InstancePtr: jlong, globalName: JString) -> Result<jobject> {
-  let InstanceData = &ref_from_raw::<InstanceDataStruct>(InstancePtr)?;
-  let Instance = &InstanceData.instance;
-  let nameString: String = env.get_string(globalName)?.into();
-  let Global = Instance.get_global(&nameString).ok_or("Global doesn't exist")?;
-
-  Ok(ValToObj(&env, &Global.get())?.into_inner())
-}
-
-fn ReadStringJni(env: JNIEnv, _class: JClass, InstancePtr: jlong, dataObj: JObject) -> Result<jstring> {
-  let data = env.get_list(dataObj)?;
-
-  let InstanceData = &ref_from_raw::<InstanceDataStruct>(InstancePtr)?;
-  let Instance = &InstanceData.instance;
-
-  Ok(env.new_string(InstanceData.langImpl.ReadString(env, data, Instance)?)?.into_inner())
-}
-
-fn NewStringJni(env: JNIEnv, _class: JClass, InstancePtr: jlong, string: JString) -> Result<jobject> {
-  let data: String = env.get_string(string)?.into();
-
-  let InstanceData = &ref_from_raw::<InstanceDataStruct>(InstancePtr)?;
-  let Instance = &InstanceData.instance;
-
-  Ok(InstanceData.langImpl.NewString(env, data, Instance)?)
+    Ok(val_to_obj(&env, &global.get(&mut module.store))?.into_inner())
 }

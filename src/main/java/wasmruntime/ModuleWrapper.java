@@ -20,18 +20,18 @@ import wasmruntime.Utils.NativeUtils;
 public class ModuleWrapper {
   public String moduleName;
 
-  private long InstanceID;
+  private long moduleId;
   
-  public Map<String, FuncType> exportedFunctions = new HashMap<String, FuncType>();
+  public Map<String, FuncType> exportedFunctions = new HashMap<>();
 
-  public Map<String, FuncType> importedFunctions = new HashMap<String, FuncType>();
+  public Map<String, FuncType> importedFunctions = new HashMap<>();
 
-  public Map<String, WasmType> exportedGlobals = new HashMap<String, WasmType>();
+  public Map<String, WasmType> exportedGlobals = new HashMap<>();
 
-  public Map<String, Function<ImportCallCtx, Value<?>[]>> imports = new HashMap<String, Function<ImportCallCtx, Value<?>[]>>();
+  public Map<String, Function<ImportCallCtx, Value<?>[]>> imports = new HashMap<>();
 
   // <name, default>
-  public static Map<String, Value<?>> knownSettings = new HashMap<String, Value<?>>();
+  public static Map<String, Value<?>> knownSettings = new HashMap<>();
 
   static {
     try {
@@ -59,10 +59,6 @@ public class ModuleWrapper {
       }
       // Uses the NativeUtils library because dependency's are hard?
       NativeUtils.loadLibraryFromJar("/"+fileName);
-      // Initializes the things?
-      Init();
-    } catch (WasmtimeException e) {
-      throw new RuntimeException(e);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -71,27 +67,30 @@ public class ModuleWrapper {
     knownSettings.put("autoReload", Value.fromI32(0));
   }
   // Wraps on a module like a day old piece of spaghettttt / Constructor sometimes I think
-  public ModuleWrapper(File file, String name) throws IOException, WasmtimeException {
+  public ModuleWrapper(File file, String name) throws WasmtimeException {
     moduleName = name;
-    InstanceID = LoadModule(file.getAbsolutePath(), moduleName, importedFunctions);
+    System.out.println(file.getAbsolutePath());
+    System.out.println(moduleName);
+    System.out.println(importedFunctions);
+    moduleId = LoadModule(file.getAbsolutePath(), moduleName, importedFunctions);
 
-    if (!ModuleImports.perModuleImports.containsKey(moduleName)) ModuleImports.perModuleImports.put(moduleName, new HashMap<String, Function<ImportCallCtx, Value<?>[]>>());
+    if (!ModuleImports.perModuleImports.containsKey(moduleName)) ModuleImports.perModuleImports.put(moduleName, new HashMap<>());
     
-    for (Entry<String, List<Byte>> entry : Functions(InstanceID).entrySet()) {
+    for (Entry<String, List<Byte>> entry : ExportedFunctions(moduleId).entrySet()) {
       exportedFunctions.put(entry.getKey(), new FuncType(entry.getValue()));
     }
 
-    for (Entry<String, Byte> entry : Globals(InstanceID).entrySet()) {
+    for (Entry<String, Byte> entry : Globals(moduleId).entrySet()) {
       exportedGlobals.put(entry.getKey(), WasmType.idMap.get(entry.getValue()));
     }
   }
 
-  public List<Value<?>> CallFunction(String name, List<Value<?>> params) throws WasmtimeException {
-    return CallFunction(InstanceID, name, params);
+  public List<Value<?>> CallExport(String name, List<Value<?>> params) throws WasmtimeException {
+    return CallExport(moduleId, name, params);
   }
 
-  public Value<?>[] CallFunction(String name, Value<?>[] params) throws WasmtimeException {
-    return CallFunction(InstanceID, name, Arrays.asList(params)).toArray(new Value<?>[0]);
+  public Value<?>[] CallExport(String name, Value<?>[] params) throws WasmtimeException {
+    return CallExport(moduleId, name, Arrays.asList(params)).toArray(new Value<?>[0]);
   }
 
   public Value<?> GetSetting(String name) {
@@ -100,45 +99,30 @@ public class ModuleWrapper {
 
   public Value<?> GetGlobal(String name, Value<?> defaultValue) {
     try {
-      return GetGlobal(InstanceID, name);
+      return GetGlobal(moduleId, name);
     } catch (WasmtimeException e) {
       return defaultValue;
     }
   }
 
   public Value<?> GetGlobal(String name) throws WasmtimeException {
-    return GetGlobal(InstanceID, name);
-  }
-
-  public String ReadString(List<Long> ptr) throws WasmtimeException {
-    return ReadString(InstanceID, ptr);
-  }
-
-  public List<Long> NewString(String str) throws WasmtimeException {
-    return NewString(InstanceID, str);
+    return GetGlobal(moduleId, name);
   }
   
   public void close() {
-    UnloadModule(InstanceID);
+    UnloadModule(moduleId);
   }
 
   private static native long LoadModule(String path, String name, Map<String, FuncType> importedFunctions) throws WasmtimeException;
 
-  private static native void Init() throws WasmtimeException;
+  private static native void UnloadModule(long moduleId);
 
-  private static native void UnloadModule(long InstancePtr);
+  private static native Map<String, List<Byte>> ExportedFunctions(long moduleId) throws WasmtimeException;
 
-  // all functions in the module
-  private static native Map<String, List<Byte>> Functions(long InstancePtr) throws WasmtimeException;
-
-  private static native List<Value<?>> CallFunction(long InstancePtr, String name, List<Value<?>> params) throws WasmtimeException;
+  private static native List<Value<?>> CallExport(long moduleId, String name, List<Value<?>> params) throws WasmtimeException;
 
   // all globals in the module
-  private static native Map<String, Byte> Globals(long InstancePtr) throws WasmtimeException;
+  private static native Map<String, Byte> Globals(long moduleId) throws WasmtimeException;
 
-  private static native Value<?> GetGlobal(long InstancePtr, String name) throws WasmtimeException;
-
-  private static native String ReadString(long InstancePtr, List<Long> ptr) throws WasmtimeException;
-
-  private static native List<Long> NewString(long InstancePtr, String ptr) throws WasmtimeException;
+  private static native Value<?> GetGlobal(long moduleId, String name) throws WasmtimeException;
 }

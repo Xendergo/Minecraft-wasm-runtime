@@ -15,8 +15,6 @@ import carpet.CarpetServer;
 import carpet.script.CarpetExpression;
 import carpet.script.Context;
 import carpet.script.Expression;
-import carpet.script.LazyValue;
-import carpet.script.Context;
 import carpet.script.argument.FunctionArgument;
 import carpet.script.exception.InternalExpressionException;
 import carpet.script.value.FunctionValue;
@@ -98,7 +96,7 @@ public class Extension implements CarpetExtension {
 
       List<Value<?>> ret;
       try {
-        ret = module.CallFunction(name, inputs);
+        ret = module.CallExport(name, inputs);
       } catch (Exception e) {
         throw new InternalExpressionException("Wasm trapped: " + e.getMessage());
       }
@@ -127,33 +125,33 @@ public class Extension implements CarpetExtension {
       return new NumericValue(0);
     });
 
-    expr.addFunction("read_string", (params) -> {
-      if (params.size() < 2 || !(params.get(0) instanceof ModuleValue) || !(params.get(1) instanceof ListValue))
-        throw new InternalExpressionException("Must provide a module and string pointer");
+    // expr.addFunction("read_string", (params) -> {
+    //   if (params.size() < 2 || !(params.get(0) instanceof ModuleValue) || !(params.get(1) instanceof ListValue))
+    //     throw new InternalExpressionException("Must provide a module and string pointer");
       
-      ModuleWrapper module = ((ModuleValue) params.get(0)).module;
+    //   ModuleWrapper module = ((ModuleValue) params.get(0)).module;
 
-      List<Long> value = ((ListValue) params.get(1)).getItems().stream().map(v -> ((NumericValue)v).getLong()).collect(Collectors.toList());
+    //   List<Long> value = ((ListValue) params.get(1)).getItems().stream().map(v -> ((NumericValue)v).getLong()).collect(Collectors.toList());
 
-      try {
-        return new StringValue(module.ReadString(value));
-      } catch (WasmtimeException e) {
-        throw new InternalExpressionException("Wasm trapped: " + e.getMessage());
-      }
-    });
+    //   try {
+    //     return new StringValue(module.ReadString(value));
+    //   } catch (WasmtimeException e) {
+    //     throw new InternalExpressionException("Wasm trapped: " + e.getMessage());
+    //   }
+    // });
 
-    expr.addFunction("new_string", (params) -> {
-      if (params.size() < 2 || !(params.get(0) instanceof ModuleValue) || !(params.get(1) instanceof StringValue))
-        throw new InternalExpressionException("Must provide a module and string");
+    // expr.addFunction("new_string", (params) -> {
+    //   if (params.size() < 2 || !(params.get(0) instanceof ModuleValue) || !(params.get(1) instanceof StringValue))
+    //     throw new InternalExpressionException("Must provide a module and string");
       
-      ModuleWrapper module = ((ModuleValue) params.get(0)).module;
+    //   ModuleWrapper module = ((ModuleValue) params.get(0)).module;
 
-      try {
-        return new ListValue(module.NewString(((StringValue)params.get(1)).getString()).stream().map((v) -> new NumericValue(v)).collect(Collectors.toList()));
-      } catch (WasmtimeException e) {
-        throw new InternalExpressionException("Wasm trapped: " + e.getMessage());
-      }
-    });
+    //   try {
+    //     return new ListValue(module.NewString(((StringValue)params.get(1)).getString()).stream().map((v) -> new NumericValue(v)).collect(Collectors.toList()));
+    //   } catch (WasmtimeException e) {
+    //     throw new InternalExpressionException("Wasm trapped: " + e.getMessage());
+    //   }
+    // });
   }
 
   private static void AssertModuleFunctionParams(List<carpet.script.value.Value> params) {

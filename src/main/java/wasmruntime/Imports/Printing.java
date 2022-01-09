@@ -54,13 +54,13 @@ public class Printing {
       }
     }
 
-    try {
-      String str = ctx.Module.ReadString(ptr);
-      System.out.println(str);
-      Message.PrettyBroadcast(new Object[] {str});
-    } catch (WasmtimeException e) {
-      throw new RuntimeException("Failed to read a string while trying to log something: " + e.getMessage());
-    }
+    // try {
+    //   String str = ctx.Module.ReadString(ptr);
+    //   System.out.println(str);
+    //   Message.PrettyBroadcast(new Object[] {str});
+    // } catch (WasmtimeException e) {
+    //   throw new RuntimeException("Failed to read a string while trying to log something: " + e.getMessage());
+    // }
 
     return new Value<?>[0];
   }
