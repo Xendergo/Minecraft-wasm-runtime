@@ -16,7 +16,7 @@ public class ModuleImports {
   public static Map<String, Map<String, Function<ImportCallCtx, Value<?>[]>>> perModuleImports = new HashMap<String, Map<String, Function<ImportCallCtx, Value<?>[]>>>();
 
   public static Value<?>[] callImport(String name, Value<?>[] values, String ModuleName) {
-    ModuleWrapper module = Modules.modules.get(ModuleName);
+    ModuleWrapper module = Modules.loadedModules.get(ModuleName);
 
     if (perModuleImports.get(ModuleName).containsKey(name)) {
       return perModuleImports.get(ModuleName).get(name).apply(new ImportCallCtx(values, ModuleName, module.importedFunctions.get(name), module));

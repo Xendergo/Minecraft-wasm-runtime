@@ -1,7 +1,6 @@
 package wasmruntime;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -25,77 +24,31 @@ import wasmruntime.Imports.Printing;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.WorldSavePath;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import static net.minecraft.server.command.CommandManager.*;
 import static com.mojang.brigadier.arguments.StringArgumentType.*;
 
 public class WasmRuntime implements ModInitializer {
+	public static final Logger LOGGER = LogManager.getLogger();
+
 	public static final File configFolder = new File("config/wasm");
-	public static AutoReload reloadThread;
+	static AutoReloader reloadThread;
+
+	static {
+		reloadThread = new AutoReloader();
+		reloadThread.start();
+	}
+
 	@Override
 	public void onInitialize() {
-		ServerLifecycleEvents.SERVER_STARTED.register((MinecraftServer server) -> {
-			reloadThread = new AutoReload();
-			reloadThread.start();
-
-			File file = new File(server.getSavePath(WorldSavePath.ROOT).toFile(), "wasm.json");
-
-			if (file.exists()) {
-				try {
-					FileReader reader = new FileReader(file);
-
-					JsonReader jsonReader = new JsonReader(reader);
-					List<String> modulesPaths = new ArrayList<>();
-
-					try {
-						jsonReader.beginArray();
-						while (jsonReader.hasNext()) {
-							modulesPaths.add(jsonReader.nextString());
-						}
-						jsonReader.endArray();
-	
-						jsonReader.close();
-					} catch (Exception e) {
-						System.out.println("Error reading wasm.json file");
-					}
-
-					for (String modulePath : modulesPaths) {
-						try {
-							Modules.LoadModule(modulePath);
-						} catch (WasmtimeException e) {
-							e.printStackTrace();
-						}
-					}
-
-				} catch (FileNotFoundException e) {
-					System.out.println("Couldn't read wasm.json file");
-				}
-			} else {
-				try {
-					file.createNewFile();
-
-					FileWriter writer = new FileWriter(file);
-					writer.write("[\n  \n]");
-					writer.close();
-				} catch (IOException e) {
-					System.out.println("Couldn't create wasm.json file");
-				}
-			}
-		
-			Modules.server = server;
-		});
+		ServerLifecycleEvents.SERVER_STARTED.register(this::onServerStart);
+		ServerLifecycleEvents.SERVER_STOPPING.register(this::onServerStop);
 
 		if (FabricLoader.getInstance().isModLoaded("carpet")) {
 			Extension.LoadExtension();
 		}
-
-		ServerLifecycleEvents.SERVER_STOPPING.register((MinecraftServer server) -> {
-			Modules.server = null;
-			
-			reloadThread.getOofed = true;
-			for (String key : Modules.modules.keySet()) {
-				Modules.UnloadModule(key);
-			}
-		});
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) -> {
 			dispatcher.register(literal("wasm")
@@ -130,5 +83,55 @@ public class WasmRuntime implements ModInitializer {
 
 			return true;
 		});
+	}
+
+	private void onServerStart(MinecraftServer server) {
+		reloadThread.changeMinecraftServer(server);
+
+		try {
+			readWasmJSON(server);
+		} catch (IOException e) {
+			LOGGER.info("Couldn't read wasm.json:");
+			e.printStackTrace();
+		}
+	}
+
+	private void onServerStop(MinecraftServer server) {
+		reloadThread.changeMinecraftServer(null);
+		for (String key : Modules.allModules()) {
+			Modules.UnloadModule(key);
+		}
+	}
+
+	private void readWasmJSON(MinecraftServer server) throws IOException {
+		File file = new File(server.getSavePath(WorldSavePath.ROOT).toFile(), "wasm.json");
+
+		if (file.exists()) {
+			FileReader reader = new FileReader(file);
+
+			try (JsonReader jsonReader = new JsonReader(reader);) {
+				List<String> modulesPaths = new ArrayList<>();
+
+				jsonReader.beginArray();
+				while (jsonReader.hasNext()) {
+					modulesPaths.add(jsonReader.nextString());
+				}
+				jsonReader.endArray();
+
+				for (String modulePath : modulesPaths) {
+					try {
+						Modules.LoadModule(server, modulePath);
+					} catch (WasmtimeException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		} else {
+			file.createNewFile();
+
+			try (FileWriter writer = new FileWriter(file);) {
+				writer.write("[\n  \n]");
+			}
+		}
 	}
 }

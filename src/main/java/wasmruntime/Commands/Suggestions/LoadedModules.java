@@ -15,7 +15,7 @@ public class LoadedModules implements SuggestionProvider<ServerCommandSource> {
 
 	@Override
 	public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder) throws CommandSyntaxException {
-    Modules.modules.keySet().forEach(name -> builder.suggest(name));
+    Modules.allModules().forEach(name -> builder.suggest(name));
 
 		return builder.buildFuture();
 	}

@@ -1,17 +1,16 @@
 package wasmruntime.CarpetStuff;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ArrayUtils;
 
 import carpet.CarpetExtension;
 import carpet.CarpetServer;
+import carpet.script.CarpetContext;
 import carpet.script.CarpetExpression;
 import carpet.script.Context;
 import carpet.script.Expression;
@@ -36,47 +35,47 @@ public class Extension implements CarpetExtension {
   }
 
   @Override
-  public void scarpetApi(CarpetExpression CarpetExpr) {
-    Expression expr = CarpetExpr.getExpr();
+  public void scarpetApi(CarpetExpression carpetExpr) {
+    Expression expr = carpetExpr.getExpr();
 
     expr.addFunction("get_module", (params) -> {
-      if (params.size() == 0 || !(params.get(0) instanceof StringValue)) throw new InternalExpressionException("Must provide a module name");
+      if (params.isEmpty() || !(params.get(0) instanceof StringValue)) throw new InternalExpressionException("Must provide a module name");
       
       String name = ((StringValue)params.get(0)).getString();
 
-      if (!Modules.modules.containsKey(name)) throw new InternalExpressionException("There's no module with that name loaded");
+      if (!Modules.moduleExists(name)) throw new InternalExpressionException("There's no module with that name loaded");
 
-      return new ModuleValue(Modules.modules.get(name));
+      return new ModuleValue(Modules.getModule(name));
     });
 
-    expr.addFunction("load_module", (params) -> {
-      if (params.size() == 0 || !(params.get(0) instanceof StringValue)) throw new InternalExpressionException("Must provide a module name");
+    expr.addContextFunction("load_module", -1, (ctx, i, params) -> {
+      if (params.isEmpty() || !(params.get(0) instanceof StringValue)) throw new InternalExpressionException("Must provide a module name");
 
       String name = ((StringValue)params.get(0)).getString();
 
-      if (!Modules.modules.containsKey(name)) {
+      if (!Modules.moduleExists(name)) {
         try {
-          Modules.LoadModule(name);
+          Modules.LoadModule(((CarpetContext) ctx).s.getServer(), name);
         } catch (WasmtimeException e) {
           throw new InternalExpressionException(e.getMessage());
         }
       }
 
-      return new ModuleValue(Modules.modules.get(name));
+      return new ModuleValue(Modules.getModule(name));
     });
 
-    expr.addFunction("reload_module", (params) -> {
-      if (params.size() == 0 || !(params.get(0) instanceof StringValue)) throw new InternalExpressionException("Must provide a module name");
+    expr.addContextFunction("reload_module", -1, (ctx, i, params) -> {
+      if (params.isEmpty() || !(params.get(0) instanceof StringValue)) throw new InternalExpressionException("Must provide a module name");
 
       String name = ((StringValue)params.get(0)).getString();
 
       try {
-        Modules.LoadModule(name);
+        Modules.LoadModule(((CarpetContext) ctx).s.getServer(), name);
       } catch (WasmtimeException e) {
         throw new InternalExpressionException(e.getMessage());
       }
 
-      return new ModuleValue(Modules.modules.get(name));
+      return new ModuleValue(Modules.getModule(name));
     });
 
     expr.addFunction("call_wasm_function", (params) -> {
@@ -90,7 +89,7 @@ public class Extension implements CarpetExtension {
       FuncType type = module.exportedFunctions.get(name);
       int argAmt = type.inputs.length;
 
-      List<Value<?>> inputs = ScarpetToWasm(params.stream().skip(2).collect(Collectors.toList()), type.inputs);
+      List<Value<?>> inputs = ScarpetToWasm(params.stream().skip(2).toList(), type.inputs);
 
       if (argAmt != inputs.size()) throw new InternalExpressionException("The function " + name + " requires " + argAmt + " arguments");
 

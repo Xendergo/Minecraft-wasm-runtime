@@ -3,6 +3,7 @@ package wasmruntime;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -10,32 +11,45 @@ import net.minecraft.server.MinecraftServer;
 import wasmruntime.Exceptions.WasmtimeException;
 
 public class Modules {
-  public static Map<String, ModuleWrapper> modules = new HashMap<>();
-  public static MinecraftServer server;
+  private Modules() {}
 
-  public static void LoadModule(File path) throws WasmtimeException {
+  static Map<String, ModuleWrapper> loadedModules = new HashMap<>();
+
+  public static void LoadModule(MinecraftServer server, File path) throws WasmtimeException {
     String name = FilenameUtils.getBaseName(path.getName());
 
     UnloadModule(name);
 
-    modules.put(name, new ModuleWrapper(path, name));
+    loadedModules.put(name, new ModuleWrapper(server, path, name));
   }
 
-  public static void LoadModule(String name) throws WasmtimeException {
+  public static void LoadModule(MinecraftServer server, String name) throws WasmtimeException {
     var maybeFile = new File(WasmRuntime.configFolder, name + ".wasm");
 
     if (maybeFile.isFile()) {
-      LoadModule(maybeFile);
+      LoadModule(server, maybeFile);
     } else {
-      LoadModule(new File(WasmRuntime.configFolder, name + "/target/wasm32-wasi/debug/" + name.replace("-", "_") + ".wasm"));
+      LoadModule(server, new File(WasmRuntime.configFolder, name + "/target/wasm32-wasi/debug/" + name.replace("-", "_") + ".wasm"));
     }
   }
 
   public static void UnloadModule(String name) {
-    if (modules.containsKey(name)) {
-      modules.get(name).close();
+    if (loadedModules.containsKey(name)) {
+      loadedModules.get(name).close();
     }
 
-    modules.remove(name);
+    loadedModules.remove(name);
+  }
+
+  public static boolean moduleExists(String name) {
+    return loadedModules.containsKey(name);
+  }
+
+  public static ModuleWrapper getModule(String name) {
+    return loadedModules.get(name);
+  }
+
+  public static Set<String> allModules() {
+    return loadedModules.keySet();
   }
 }

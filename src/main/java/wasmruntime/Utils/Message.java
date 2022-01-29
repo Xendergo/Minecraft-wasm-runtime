@@ -1,5 +1,6 @@
 package wasmruntime.Utils;
 
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
@@ -7,16 +8,17 @@ import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
 import net.minecraft.util.Util;
-import wasmruntime.Modules;
 
 public class Message {
-  public static void broadcast(Text msg) {
-    for (ServerPlayerEntity player : Modules.server.getPlayerManager().getPlayerList()) {
+  private Message() {}
+  
+  public static void broadcast(MinecraftServer server, Text msg) {
+    for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
       player.sendSystemMessage(msg, Util.NIL_UUID);
     }
   }
 
-  public static void PrettyBroadcast(Object[] items) {
+  public static void PrettyBroadcast(MinecraftServer server, Object[] items) {
     MutableText out = new LiteralText("");
 
     for (Object value : items) {
@@ -36,6 +38,6 @@ public class Message {
       out.append(v);
     }
 
-    broadcast(out);
+    broadcast(server, out);
   }
 }

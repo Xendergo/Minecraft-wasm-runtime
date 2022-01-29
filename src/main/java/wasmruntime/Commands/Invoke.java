@@ -21,9 +21,11 @@ import wasmruntime.Types.Value;
 import wasmruntime.Utils.Message;
 
 public class Invoke {
+  private Invoke() {}
+  
   public static int run(CommandContext<ServerCommandSource> ctx, String moduleName, String functionName, String arguments) throws CommandSyntaxException {
-    if (!Modules.modules.containsKey(moduleName)) throw new SimpleCommandExceptionType(new TranslatableText("wasm.commands.error.no_such_module", moduleName)).create();
-    ModuleWrapper module = Modules.modules.get(moduleName);
+    if (!Modules.moduleExists(moduleName)) throw new SimpleCommandExceptionType(new TranslatableText("wasm.commands.error.no_such_module", moduleName)).create();
+    ModuleWrapper module = Modules.getModule(moduleName);
 
     if (!module.exportedFunctions.containsKey(functionName)) throw new SimpleCommandExceptionType(new TranslatableText("wasm.commands.error.no_such_function", functionName)).create();
     FuncType func = module.exportedFunctions.get(functionName);
@@ -31,7 +33,7 @@ public class Invoke {
     String[] argsStrings = StringUtils.split(arguments, " ");
     if (argsStrings.length != func.inputs.length) throw new SimpleCommandExceptionType(new TranslatableText("wasm.commands.error.incorrect_arg_amt", func.inputs.length)).create();
     
-    List<Value<?>> stack = new ArrayList<Value<?>>();
+    List<Value<?>> stack = new ArrayList<>();
 
     for (int i = 0; i < argsStrings.length; i++) {
       try {
@@ -71,7 +73,7 @@ public class Invoke {
       return 0;
     }
 
-    Message.broadcast(new TranslatableText("wasm.commands.invoke.return", output));
+    Message.broadcast(ctx.getSource().getServer(), new TranslatableText("wasm.commands.invoke.return", output));
 
     return Command.SINGLE_SUCCESS;
   }

@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
 
+import net.minecraft.server.MinecraftServer;
 import wasmruntime.Enums.WasmType;
 import wasmruntime.Exceptions.WasmtimeException;
 import wasmruntime.Types.FuncType;
@@ -29,6 +30,8 @@ public class ModuleWrapper {
   public Map<String, WasmType> exportedGlobals = new HashMap<>();
 
   public Map<String, Function<ImportCallCtx, Value<?>[]>> imports = new HashMap<>();
+
+  public MinecraftServer server;
 
   // <name, default>
   public static Map<String, Value<?>> knownSettings = new HashMap<>();
@@ -68,12 +71,10 @@ public class ModuleWrapper {
   }
   
   // Wraps on a module like a day old piece of spaghettttt / Constructor sometimes I think
-  public ModuleWrapper(File file, String name) throws WasmtimeException {
+  public ModuleWrapper(MinecraftServer server, File file, String name) throws WasmtimeException {
     moduleName = name;
-    System.out.println(file.getAbsolutePath());
-    System.out.println(moduleName);
-    System.out.println(importedFunctions);
     moduleId = LoadModule(file.getAbsolutePath(), moduleName, importedFunctions);
+    this.server = server;
 
     if (!ModuleImports.perModuleImports.containsKey(moduleName)) ModuleImports.perModuleImports.put(moduleName, new HashMap<>());
     

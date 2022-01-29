@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import wasmruntime.Enums.WasmType;
-import wasmruntime.Exceptions.WasmtimeException;
 import wasmruntime.Types.Value;
 import wasmruntime.Utils.ImportCallCtx;
 import wasmruntime.Utils.Message;
@@ -36,7 +35,7 @@ public class Printing {
       }
     }
 
-    Message.PrettyBroadcast(values);
+    Message.PrettyBroadcast(ctx.Module.server, values);
 
     return new Value<?>[0];
   }
