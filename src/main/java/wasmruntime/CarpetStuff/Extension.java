@@ -57,7 +57,7 @@ public class Extension implements CarpetExtension {
       if (!Modules.modules.containsKey(name)) {
         try {
           Modules.LoadModule(name);
-        } catch (IOException | WasmtimeException e) {
+        } catch (WasmtimeException e) {
           throw new InternalExpressionException(e.getMessage());
         }
       }
@@ -72,7 +72,7 @@ public class Extension implements CarpetExtension {
 
       try {
         Modules.LoadModule(name);
-      } catch (IOException | WasmtimeException e) {
+      } catch (WasmtimeException e) {
         throw new InternalExpressionException(e.getMessage());
       }
 

@@ -15,7 +15,7 @@ import wasmruntime.WasmRuntime;
 public class Load {
   public static int run(CommandContext<ServerCommandSource> ctx, String moduleName) throws CommandSyntaxException {
     try {
-      Modules.LoadModule(new File(WasmRuntime.configFolder, moduleName + ".wasm"));
+      Modules.LoadModule(moduleName);
     } catch (Exception e) {
       throw new SimpleCommandExceptionType(new LiteralText(e.getMessage())).create();
     }

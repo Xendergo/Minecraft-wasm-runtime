@@ -66,6 +66,7 @@ public class ModuleWrapper {
     // this doesn't set anything this is literally just a default value -xendergo
     knownSettings.put("autoReload", Value.fromI32(0));
   }
+  
   // Wraps on a module like a day old piece of spaghettttt / Constructor sometimes I think
   public ModuleWrapper(File file, String name) throws WasmtimeException {
     moduleName = name;

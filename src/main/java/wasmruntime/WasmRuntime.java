@@ -60,9 +60,8 @@ public class WasmRuntime implements ModInitializer {
 
 					for (String modulePath : modulesPaths) {
 						try {
-							File module = new File(configFolder, modulePath + ".wasm");
-							Modules.LoadModule(module);
-						} catch (IOException | WasmtimeException e) {
+							Modules.LoadModule(modulePath);
+						} catch (WasmtimeException e) {
 							e.printStackTrace();
 						}
 					}
