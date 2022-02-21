@@ -18,9 +18,10 @@ import wasmruntime.Commands.Load;
 import wasmruntime.Commands.Suggestions.ExportedFunctions;
 import wasmruntime.Commands.Suggestions.LoadableModules;
 import wasmruntime.Commands.Suggestions.LoadedModules;
-import wasmruntime.Enums.WasmType;
-import wasmruntime.Exceptions.WasmtimeException;
+import wasmruntime.Exceptions.WasmtimeEmbeddingException;
 import wasmruntime.Imports.Printing;
+import wasmruntime.Types.FuncSignature;
+import wasmruntime.Types.InteroperableType;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.WorldSavePath;
 
@@ -76,13 +77,7 @@ public class WasmRuntime implements ModInitializer {
 
 		// Register imports
 		ModuleImports.Register("print", Printing::log);
-		ModuleImports.Register("printString", Printing::logString, (types) -> {
-			for (WasmType type : types) {
-				if (type == WasmType.F32 || type == WasmType.F64) return false;
-			}
-
-			return true;
-		});
+		ModuleImports.Register("print_string", Printing::logString, new FuncSignature(new InteroperableType[] {InteroperableType.String}, new InteroperableType[0]));
 	}
 
 	private void onServerStart(MinecraftServer server) {
@@ -121,7 +116,7 @@ public class WasmRuntime implements ModInitializer {
 				for (String modulePath : modulesPaths) {
 					try {
 						Modules.LoadModule(server, modulePath);
-					} catch (WasmtimeException e) {
+					} catch (WasmtimeEmbeddingException e) {
 						e.printStackTrace();
 					}
 				}

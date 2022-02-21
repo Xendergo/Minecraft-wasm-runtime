@@ -10,13 +10,14 @@ import net.minecraft.text.LiteralText;
 import wasmruntime.Modules;
 
 public class Load {
-  public static int run(CommandContext<ServerCommandSource> ctx, String moduleName) throws CommandSyntaxException {
-    try {
-      Modules.LoadModule(ctx.getSource().getServer(), moduleName);
-    } catch (Exception e) {
-      throw new SimpleCommandExceptionType(new LiteralText(e.getMessage())).create();
-    }
+    public static int run(CommandContext<ServerCommandSource> ctx, String moduleName) throws CommandSyntaxException {
+        try {
+            Modules.LoadModule(ctx.getSource().getServer(), moduleName);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new SimpleCommandExceptionType(new LiteralText(e.getMessage())).create();
+        }
 
-    return Command.SINGLE_SUCCESS;
-  }
+        return Command.SINGLE_SUCCESS;
+    }
 }

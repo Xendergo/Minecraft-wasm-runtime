@@ -13,3 +13,6 @@ elif [ -f "$FILE.dll" ]; then
 else
   echo "$FILE does not exist"
 fi
+# For whatever reason, it doesn't copy properly if you don't sleep
+sleep 0.2
+echo "Done compiling"

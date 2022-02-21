@@ -6,29 +6,27 @@ use jni::{self, JNIEnv};
 use std::io;
 use std::str::Utf8Error;
 use std::string::{FromUtf16Error, FromUtf8Error};
-use std::sync::TryLockError;
+use std::sync::{Arc, TryLockError};
 use thiserror::Error;
 use wasi_common::StringArrayError;
 use wasmtime::{MemoryAccessError, Trap};
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum Error {
     #[error("JNI error: {0}")]
-    Jni(#[from] jni::errors::Error),
+    Jni(Arc<jni::errors::Error>),
     #[error("Wasmtime error: {0}")]
-    Wasmtime(#[from] anyhow::Error),
+    Wasmtime(Arc<anyhow::Error>),
     #[error("unknown enum variant: {0}")]
     UnknownEnum(String),
-    #[error("not implemented")]
+    #[error("Not implemented")]
     NotImplemented,
-    #[error("{0}")]
+    #[error("Lock poisoned: {0}")]
     LockPoison(String),
     #[error("IO error: {0}")]
-    Io(#[from] io::Error),
-    #[error("")]
-    String(String),
+    Io(#[from] Arc<io::Error>),
     #[error("StringArrayError: {0}")]
     StringArrayError(String),
     #[error("UTF8 error: {0}")]
@@ -39,27 +37,47 @@ pub enum Error {
     MemoryAccessError(String),
     #[error("Wasm trapped: {0}")]
     WasmTrap(String),
+    #[error("Couldn't convert value: {0}")]
+    CouldntConvertValue(String),
     #[error("Resource was locked")]
     ResourceLocked,
-    #[error("Module doesn't exist")]
-    ModuleDoesntExist,
+    #[error("Module doesn't exist: {0}")]
+    ModuleDoesntExist(i64),
+    #[error("Unknown id for an interoperable type")]
+    UnknownInteroperableTypeID,
+    #[error("Export doesn't exist: {0}")]
+    ExportDoesntExist(String),
+    #[error("Incorrect argument, index {0}")]
+    IncorrectArgument(usize),
+    #[error("Incorrect return value, index {0}")]
+    IncorrectReturn(usize),
+    #[error("Corrupted module: {0}")]
+    CorruptedModule(String),
+    #[error("Conversion error: {0}")]
+    ConversionError(String),
+}
+
+impl From<jni::errors::Error> for Error {
+    fn from(err: jni::errors::Error) -> Self {
+        Error::Jni(Arc::new(err))
+    }
+}
+
+impl From<anyhow::Error> for Error {
+    fn from(err: anyhow::Error) -> Self {
+        Error::Wasmtime(Arc::new(err))
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Self {
+        Error::Io(Arc::new(err))
+    }
 }
 
 impl<G> From<std::sync::PoisonError<G>> for Error {
     fn from(err: std::sync::PoisonError<G>) -> Self {
         Error::LockPoison(err.to_string())
-    }
-}
-
-impl From<&str> for Error {
-    fn from(str: &str) -> Self {
-        Error::String(String::from(str))
-    }
-}
-
-impl From<String> for Error {
-    fn from(str: String) -> Self {
-        Error::String(str)
     }
 }
 
@@ -114,7 +132,7 @@ impl<'a> Desc<'a, JThrowable<'a>> for Error {
         let (ex_class, msg) = match &self {
             Jni(e) => {
                 use jni::errors::Error;
-                match e {
+                match &**e {
                     Error::JavaException => return env.exception_occurred(),
                     Error::NullPtr(_) | Error::NullDeref(_) => {
                         ("java/lang/NullPointerException", self.to_string())
@@ -126,13 +144,28 @@ impl<'a> Desc<'a, JThrowable<'a>> for Error {
                 }
             }
 
-            Wasmtime(e) => ("wasmruntime/Exceptions/WasmtimeException", e.to_string()),
-
-            Io(_) | NotImplemented | LockPoison(_) | StringArrayError(_) | ResourceLocked
-            | ModuleDoesntExist => ("java/lang/RuntimeException", self.to_string()),
-
-            String(e) | UTF8Error(e) | UnknownEnum(e) | UTF16Error(e) | MemoryAccessError(e)
-            | WasmTrap(e) => ("java/lang/RuntimeException", self.to_string() + e),
+            Wasmtime(_)
+            | Io(_)
+            | UnknownEnum(_)
+            | NotImplemented
+            | LockPoison(_)
+            | StringArrayError(_)
+            | UTF8Error(_)
+            | UTF16Error(_)
+            | MemoryAccessError(_)
+            | WasmTrap(_)
+            | CouldntConvertValue(_)
+            | ResourceLocked
+            | UnknownInteroperableTypeID
+            | ModuleDoesntExist(_)
+            | ExportDoesntExist(_)
+            | IncorrectArgument(_)
+            | IncorrectReturn(_)
+            | CorruptedModule(_)
+            | ConversionError(_) => (
+                "wasmruntime/Exceptions/WasmtimeEmbeddingException",
+                self.to_string(),
+            ),
         };
 
         let jmsg = env.new_string(msg)?;
